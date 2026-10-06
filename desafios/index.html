@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desafíos DA hoy</title>
+<style>
+  html, body { margin: 0; background: #071a15; color: #f4f1e8; font-family: Inter, system-ui, sans-serif; }
+  #stage { display: block; width: 100vw; max-width: 1920px; height: auto; margin: 0 auto; aspect-ratio: 16 / 9; }
+  #controls { display: flex; gap: 8px; justify-content: center; padding: 12px 16px; flex-wrap: wrap; }
+  #controls button { background: #123b30; color: #f4f1e8; border: 1px solid #2bb673; border-radius: 999px; padding: 8px 16px; font: 600 14px Inter, sans-serif; cursor: pointer; }
+  #controls button.on { background: #2bb673; color: #071a15; }
+  body.render #controls { display: none; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1920" height="1080"></canvas>
+<div id="controls"></div>
+<script src="../motion/assets/logos.js"></script>
+<script src="desafios.js"></script>
+</body>
+</html>
