@@ -1,6 +1,7 @@
 // Renderiza el motion a MP4 (1920x1080, 30 fps) con Playwright + ffmpeg.
-// Uso: node render.js [0-4 ...] [--frames t1,t2,...]
-//   0 = las 4 soluciones seguidas (por defecto), 1-4 = una sola solución.
+// Uso: node render.js [0-5 ...] [--frames t1,t2,...]
+//   0 = video completo (línea de tiempo + 4 soluciones, por defecto),
+//   1-4 = una sola solución, 5 = solo la línea de tiempo.
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -10,7 +11,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
   const args = process.argv.slice(2);
   const fi = args.indexOf('--frames');
   const stills = fi >= 0 ? args[fi + 1].split(',').map(Number) : null;
-  const sols = args.filter((a, i) => /^[0-4]$/.test(a) && !(fi >= 0 && i === fi + 1)).map(Number);
+  const sols = args.filter((a, i) => /^[0-5]$/.test(a) && !(fi >= 0 && i === fi + 1)).map(Number);
   const list = sols.length ? sols : [0];
   const outDir = path.join(__dirname, 'out');
   fs.mkdirSync(outDir, { recursive: true });
@@ -34,7 +35,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       for (const t of stills) fs.writeFileSync(path.join(outDir, `still_s${s}_${t}.png`), await grab(t, s));
       continue;
     }
-    const name = s === 0 ? 'desafio_corazon_4_soluciones.mp4' : `desafio_corazon_solucion_${s}.mp4`;
+    const name = s === 0 ? 'desafio_corazon_4_soluciones.mp4' : s === 5 ? 'desafio_linea_de_tiempo.mp4' : `desafio_corazon_solucion_${s}.mp4`;
     const file = path.join(outDir, name);
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
       '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'medium', '-movflags', '+faststart', file],

@@ -16,8 +16,11 @@
   // 0 – R0: entrada única de envases y proceso. Luego una ronda de RL s por
   // problema (escaneo -> solución) y al final el cierre con el logo.
   const R0 = 7.4, RL = 7.8, OUTRO = 3.4;
-  const makeSched = (rounds) => ({ rounds, outro: R0 + rounds.length * RL, dur: R0 + rounds.length * RL + OUTRO });
-  const schedFor = (s) => makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3]);
+  const TL = 14.5; // duración de la intro con la línea de tiempo
+  // s = 0: intro con la línea de tiempo + las 4 soluciones; 1-4: una solución;
+  // 5: solo la línea de tiempo.
+  const makeSched = (rounds, intro) => ({ rounds, intro, outro: R0 + rounds.length * RL, dur: intro + R0 + rounds.length * RL + OUTRO });
+  const schedFor = (s) => (s === 5 ? { ...makeSched([0], TL), dur: TL } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? TL : 0));
   let SCHED = schedFor(0);
   function roundAt(t) {
     if (t < R0) return null;
@@ -27,7 +30,7 @@
 
   // ---------- Logo ----------
   const LOGO = {};
-  const logosReady = Promise.all(['mark', 'text_dark', 'text_light'].map((k) => new Promise((res) => {
+  const logosReady = Promise.all(['mark', 'text_dark', 'text_light', 'hist_desafio_2015', 'hist_aislapet', 'hist_everwood'].map((k) => new Promise((res) => {
     const img = new Image();
     img.onload = () => res();
     img.onerror = () => res();
@@ -1279,6 +1282,270 @@
     ctx.restore();
   }
 
+  // ---------- Intro: línea de tiempo 2015 – 2026 ----------
+  const TL_Y = 560, TL_X0 = 200, TL_DX = 217;
+  const TL_T0 = 2.0, TL_STEP = 1.15;
+  const MILESTONES = [
+    { year: '2015', lines: ['Fundación', 'Desafío Ambiente'], visual: 'hist_desafio_2015' },
+    { year: '2019', lines: ['Incorporación', 'innovación I+D', 'Crisis social'], visual: 'hist_aislapet' },
+    { year: '2020', lines: ['Transformación del', 'modelo de negocios', 'Ley REP', 'Maderas plásticas'], visual: 'bulb' },
+    { year: '2021', lines: ['Entrada a retail', 'Estrategias con foco', 'en sostenibilidad'], visual: 'hist_everwood' },
+    { year: '2022', lines: ['Expansión internacional', 'Aumento de clientes', 'Nuevas marcas', 'Nuevas filiales'], visual: 'globe' },
+    { year: '2023 – 2024', lines: ['Lanzamiento Perú', 'Softlanding USA', 'Rebranding', 'Ser referente'], visual: 'logo' },
+    { year: '2025', lines: ['Foco en proyectos', 'de alto impacto', 'Multiplicador y', 'valor compartido'], visual: 'network' },
+    { year: '2026', lines: ['Link circular'], visual: 'link', final: true },
+  ];
+  const PHASES = [
+    { label: 'Reciclaje', from: 0, to: 1 },
+    { label: 'Valorización', from: 2, to: 3 },
+    { label: 'Valor compartido', from: 4, to: 5 },
+    { label: 'Ecosistema circular', from: 6, to: 7 },
+  ];
+  const nodeX = (k) => TL_X0 + k * TL_DX;
+  const nodeT = (k) => TL_T0 + k * TL_STEP;
+
+  // posición de la cabeza de la línea (se detiene un instante en cada hito)
+  function tlHead(t) {
+    if (t <= TL_T0) return { x: TL_X0 - 80 + 80 * easeOut(prog(t, TL_T0 - 0.6, TL_T0)), k: -1 + (t >= TL_T0 ? 1 : 0) };
+    const last = MILESTONES.length - 1;
+    const f = Math.min(last, (t - TL_T0) / TL_STEP);
+    const k = Math.floor(f);
+    const x = k >= last ? nodeX(last) : lerp(nodeX(k), nodeX(k + 1), easeInOut(clamp((f - k - 0.35) / 0.65)));
+    return { x, k };
+  }
+
+  function strokeIcon(ctx, col) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  function iconBulb(ctx, col) {
+    strokeIcon(ctx, col);
+    ctx.beginPath();
+    ctx.arc(0, -12, 30, Math.PI * 0.8, Math.PI * 2.2);
+    ctx.lineTo(14, 26);
+    ctx.lineTo(-14, 26);
+    ctx.closePath();
+    ctx.moveTo(-12, 36); ctx.lineTo(12, 36);
+    ctx.moveTo(-8, 45); ctx.lineTo(8, 45);
+    ctx.moveTo(-6, 0); ctx.lineTo(0, 10); ctx.lineTo(6, 0);
+    ctx.stroke();
+  }
+  function iconGlobe(ctx, col) {
+    strokeIcon(ctx, col);
+    ctx.beginPath();
+    ctx.arc(0, 0, 42, 0, Math.PI * 2);
+    ctx.moveTo(0, -42); ctx.ellipse(0, 0, 18, 42, 0, -Math.PI / 2, Math.PI * 1.5);
+    ctx.moveTo(-42, 0); ctx.lineTo(42, 0);
+    ctx.moveTo(-36, -20); ctx.lineTo(36, -20);
+    ctx.moveTo(-36, 20); ctx.lineTo(36, 20);
+    ctx.stroke();
+    // avión
+    ctx.save();
+    ctx.translate(32, -36);
+    ctx.rotate(-0.6);
+    ctx.fillStyle = C.lime;
+    ctx.beginPath();
+    ctx.moveTo(-16, 0); ctx.lineTo(16, 0); ctx.lineTo(20, 3); ctx.lineTo(16, 5); ctx.lineTo(-16, 5);
+    ctx.moveTo(0, 0); ctx.lineTo(-6, -14); ctx.lineTo(-1, -14); ctx.lineTo(8, 0);
+    ctx.moveTo(0, 5); ctx.lineTo(-6, 19); ctx.lineTo(-1, 19); ctx.lineTo(8, 5);
+    ctx.fill();
+    ctx.restore();
+  }
+  function iconNetwork(ctx, col) {
+    const pts = [[0, 0], [-40, -26], [36, -32], [44, 18], [-30, 34], [6, 46], [-48, 6]];
+    strokeIcon(ctx, col);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    pts.slice(1).forEach(([x, y]) => { ctx.moveTo(0, 0); ctx.lineTo(x, y); });
+    [[1, 6], [2, 3], [4, 5], [3, 5], [1, 2]].forEach(([a, b]) => { ctx.moveTo(...pts[a]); ctx.lineTo(...pts[b]); });
+    ctx.stroke();
+    pts.forEach(([x, y], k) => {
+      ctx.fillStyle = k === 0 ? C.lime : col;
+      ctx.beginPath();
+      ctx.arc(x, y, k === 0 ? 10 : 6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+  function iconLink(ctx, col) {
+    strokeIcon(ctx, col);
+    ctx.lineWidth = 7;
+    ctx.save();
+    ctx.rotate(-0.6);
+    ctx.beginPath();
+    ctx.roundRect(-44, -15, 52, 30, 15);
+    ctx.roundRect(-8, -15, 52, 30, 15);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawVisual(ctx, m, x, y, k) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(k, k);
+    const img = (key, w) => {
+      const im = LOGO[key];
+      const h = (w * im.naturalHeight) / im.naturalWidth;
+      ctx.drawImage(im, -w / 2, -h / 2, w, h);
+    };
+    if (m.visual === 'hist_desafio_2015') img(m.visual, 190);
+    else if (m.visual === 'hist_aislapet') img(m.visual, 150);
+    else if (m.visual === 'hist_everwood') img(m.visual, 140);
+    else if (m.visual === 'logo') {
+      const h = 66, w = (613 / 283) * h;
+      drawLogo(ctx, -w / 2, -h / 2, h, 'text_light');
+    } else if (m.visual === 'bulb') iconBulb(ctx, C.cream);
+    else if (m.visual === 'globe') iconGlobe(ctx, C.cream);
+    else if (m.visual === 'network') iconNetwork(ctx, C.cream);
+    else if (m.visual === 'link') iconLink(ctx, C.lime);
+    ctx.restore();
+  }
+
+  function drawTimeline(ctx, t) {
+    drawBackground(ctx, t);
+    const head = tlHead(t);
+    const last = MILESTONES.length - 1;
+    const reached = (k) => t >= nodeT(k);
+
+    // encabezado: contador de años
+    const ha = easeOut(prog(t, 0.2, 1.0));
+    // años transcurridos según la posición de la cabeza sobre la línea
+    const YEARS = [2015, 2019, 2020, 2021, 2022, 2024, 2025, 2026];
+    const f = clamp((head.x - TL_X0) / TL_DX, 0, last);
+    const fk = Math.min(last - 1, Math.floor(f));
+    const yearsNow = Math.round(lerp(YEARS[fk], YEARS[fk + 1], f - fk)) - 2015;
+    ctx.save();
+    ctx.globalAlpha = ha;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.muted;
+    ctx.font = `700 22px ${FONT}`;
+    ctx.letterSpacing = '6px';
+    ctx.fillText('HOLDING DESAFÍO AMBIENTE · 2015 – 2026', W / 2 + 3, 70);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = C.cream;
+    ctx.font = `900 84px ${FONT}`;
+    ctx.fillText(`${yearsNow} ${yearsNow === 1 ? 'año' : 'años'}`, W / 2, 162);
+    ctx.fillStyle = C.lime;
+    ctx.font = `600 30px ${FONT}`;
+    ctx.fillText('incorporando nuevas problemáticas para atender al mercado', W / 2, 212);
+    ctx.restore();
+
+    // línea base y progreso
+    const la = easeOut(prog(t, 0.8, 1.6));
+    ctx.save();
+    ctx.globalAlpha = la;
+    ctx.strokeStyle = 'rgba(244,241,232,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(TL_X0 - 80, TL_Y); ctx.lineTo(nodeX(last) + 80, TL_Y);
+    ctx.stroke();
+    ctx.strokeStyle = C.lime;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(TL_X0 - 80, TL_Y); ctx.lineTo(head.x, TL_Y);
+    ctx.stroke();
+    ctx.restore();
+
+    // hitos
+    MILESTONES.forEach((m, k) => {
+      const x = nodeX(k);
+      const tk = nodeT(k);
+      const above = k % 2 === 1;
+      // nodo (rombo)
+      const np = easeBack(prog(t, tk - 0.1, tk + 0.3));
+      ctx.save();
+      ctx.globalAlpha = la;
+      ctx.translate(x, TL_Y);
+      ctx.rotate(Math.PI / 4);
+      const sz = reached(k) ? 9 + 4 * np : 7;
+      ctx.fillStyle = reached(k) ? (m.final ? C.lime : C.cream) : 'rgba(244,241,232,0.35)';
+      ctx.fillRect(-sz, -sz, sz * 2, sz * 2);
+      ctx.restore();
+      // halo al llegar
+      const hp = prog(t, tk, tk + 0.6);
+      if (hp > 0 && hp < 1) {
+        ctx.strokeStyle = `rgba(182,227,90,${1 - hp})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, TL_Y, 14 + 40 * hp, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // texto
+      const ta = easeOut(prog(t, tk + 0.05, tk + 0.55));
+      if (ta > 0) {
+        ctx.save();
+        ctx.globalAlpha = ta;
+        ctx.textAlign = 'center';
+        const dy = (1 - ta) * (above ? 14 : -14);
+        const yYear = above ? TL_Y - 60 - m.lines.length * 27 : TL_Y + 70;
+        ctx.fillStyle = m.final ? C.lime : C.cream;
+        ctx.font = `800 ${m.year.length > 4 ? 30 : 36}px ${FONT}`;
+        ctx.fillText(m.year, x, yYear + dy);
+        ctx.fillStyle = m.final ? C.lime : C.muted;
+        ctx.font = m.final ? `800 30px ${FONT}` : `500 18px ${FONT}`;
+        m.lines.forEach((ln, i) => ctx.fillText(m.final ? ln.toUpperCase() : ln, x, yYear + (m.final ? 44 : 34) + i * 27 + dy));
+        ctx.restore();
+      }
+      // visual (logo o ícono) en el lado opuesto
+      const vp = easeBack(prog(t, tk + 0.15, tk + 0.65));
+      if (vp > 0) {
+        ctx.save();
+        ctx.globalAlpha = clamp(vp);
+        drawVisual(ctx, m, x, above ? TL_Y + 95 : TL_Y - 100, 0.6 + 0.4 * vp);
+        ctx.restore();
+      }
+    });
+
+    // fases del recorrido
+    const py = 860;
+    const pa = easeOut(prog(t, 1.2, 2.0));
+    ctx.save();
+    ctx.globalAlpha = pa;
+    ctx.strokeStyle = 'rgba(182,227,90,0.35)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([3, 9]);
+    ctx.beginPath();
+    ctx.moveTo(TL_X0 - 40, py); ctx.lineTo(nodeX(last) + 60, py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = C.lime;
+    ctx.setLineDash([3, 9]);
+    ctx.beginPath();
+    ctx.moveTo(TL_X0 - 40, py); ctx.lineTo(Math.max(TL_X0 - 40, head.x + 20), py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = C.lime;
+    ctx.beginPath();
+    ctx.moveTo(nodeX(last) + 72, py); ctx.lineTo(nodeX(last) + 56, py - 8); ctx.lineTo(nodeX(last) + 56, py + 8);
+    ctx.fill();
+    PHASES.forEach((p) => {
+      const cxp = (nodeX(p.from) + nodeX(p.to)) / 2;
+      const on = easeOut(prog(t, nodeT(p.from), nodeT(p.from) + 0.5));
+      ctx.textAlign = 'center';
+      ctx.font = `900 34px ${FONT}`;
+      ctx.fillStyle = on > 0 ? `rgba(244,241,232,${0.25 + 0.75 * on})` : 'rgba(244,241,232,0.25)';
+      ctx.fillText(p.label.toUpperCase(), cxp, py + 62);
+    });
+    ctx.restore();
+
+    // remate y paso al corazón de Desafío
+    const ca = easeOut(prog(t, 11.9, 12.6));
+    if (ca > 0) {
+      ctx.save();
+      ctx.globalAlpha = ca;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.cream;
+      ctx.font = `800 34px ${FONT}`;
+      ctx.fillText('Cada problemática se volvió una solución. Hoy, todo pasa por el corazón de Desafío.', W / 2, 1020);
+      ctx.restore();
+    }
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, TL - 0.7, TL));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
   function renderFrame(t) {
     const ctx = document.getElementById('stage').getContext('2d');
     ctx.save();
@@ -1297,7 +1564,7 @@
     drawCards(ctx, t);
     drawOutro(ctx, t);
     // fundido de entrada / salida
-    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, SCHED.dur - 0.4, SCHED.dur));
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, SCHED.dur - SCHED.intro - 0.4, SCHED.dur - SCHED.intro));
     if (fade > 0) {
       ctx.fillStyle = `rgba(7,26,21,${fade})`;
       ctx.fillRect(0, 0, W, H);
@@ -1306,9 +1573,18 @@
   }
 
   window.MOTION = { FPS, W, H, duration: (s) => schedFor(s).dur, ready: logosReady };
+  function renderAll(t) {
+    if (t < SCHED.intro) {
+      const ctx = document.getElementById('stage').getContext('2d');
+      ctx.save();
+      ctx.textAlign = 'left';
+      drawTimeline(ctx, t);
+      ctx.restore();
+    } else renderFrame(t - SCHED.intro);
+  }
   window.renderFrame = (t, s) => {
     SCHED = schedFor(s);
-    renderFrame(t);
+    renderAll(t);
   };
 
   // ---------- Vista previa ----------
@@ -1317,7 +1593,7 @@
     document.body.classList.add('render');
     return;
   }
-  let sel = clamp(parseInt(params.get('s') || '0', 10) || 0, 0, 4);
+  let sel = clamp(parseInt(params.get('s') || '0', 10) || 0, 0, 5);
   let start = performance.now();
   const buttons = document.querySelectorAll('#controls button');
   const mark = () => buttons.forEach((b) => b.classList.toggle('on', +b.dataset.s === sel));
@@ -1326,7 +1602,7 @@
   Promise.all([document.fonts.ready, logosReady]).then(() => {
     const loop = (now) => {
       SCHED = schedFor(sel);
-      renderFrame(((now - start) / 1000) % SCHED.dur);
+      renderAll(((now - start) / 1000) % SCHED.dur);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);

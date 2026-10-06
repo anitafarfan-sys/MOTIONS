@@ -1,5 +1,7 @@
 # Motion · El corazón de Desafío Ambiente
 
+El video completo parte con la **línea de tiempo 2015 – 2026** del Holding Desafío Ambiente: 11 años incorporando nuevas problemáticas para atender al mercado (Reciclaje → Valorización → Valor compartido → Ecosistema circular). Luego pasa al corazón de Desafío:
+
 El plástico problemático entra **una sola vez** a la caja **Desafío** (con el logo de Desafío Ambiente) y se procesa (Recolectar → Clasificar → Reconvertir). Después se escanean los problemas uno tras otro y cada uno sale como una de las 4 soluciones:
 
 1. Construcción (madera plástica: lotes de tablas 1×4 de 2,8 m, vigas y postes)
@@ -9,12 +11,14 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 ## Videos (1920×1080, 30 fps)
 
-- `motion/out/desafio_corazon_4_soluciones.mp4`: una sola entrada de envases y luego los 4 problemas escaneados seguidos (42 s)
+- `motion/out/desafio_corazon_4_soluciones.mp4`: video completo: línea de tiempo + una sola entrada de envases + los 4 problemas escaneados seguidos (56,5 s)
+- `motion/out/desafio_linea_de_tiempo.mp4`: solo la línea de tiempo (14,5 s)
 - `motion/out/desafio_corazon_solucion_1.mp4` a `_4.mp4`: una versión por solución (18,6 s)
 
 ## Editar y volver a renderizar
 
-- Vista previa: abrir `motion/index.html?s=0` (las 4 seguidas) o `?s=1` a `?s=4` en el navegador.
+- Vista previa: abrir `motion/index.html?s=0` (video completo), `?s=5` (solo línea de tiempo) o `?s=1` a `?s=4` en el navegador.
+- Los hitos de la línea de tiempo están en `MILESTONES` y `PHASES` dentro de `motion/motion.js`.
 - Los textos y colores están al inicio de `motion/motion.js` (`SOLUTIONS` y `C`).
 - El logo está en `motion/assets/` (PNG transparentes) y embebido en `motion/assets/logos.js`.
-- Para renderizar se necesitan Node, Playwright y ffmpeg: `node motion/render.js 0 1 2 3 4` (0 = las 4 seguidas)
+- Para renderizar se necesitan Node, Playwright y ffmpeg: `node motion/render.js 0 1 2 3 4 5` (0 = video completo, 5 = solo línea de tiempo)
