@@ -1,15 +1,51 @@
 // Motion "El corazón de Desafío Ambiente"
-// Un problema (plástico problemático + desafío) entra a la caja Desafío
-// y sale convertido en una de 4 soluciones.
+// El plástico problemático entra una sola vez a la caja Desafío; luego se
+// escanean los problemas uno tras otro y cada uno sale como una solución.
 //
 // Uso:
-//   index.html?s=1..4          -> vista previa en loop de la solución elegida
+//   index.html?s=0             -> vista previa de las 4 soluciones seguidas
+//   index.html?s=1..4          -> vista previa de una sola solución
 //   window.renderFrame(t, s)   -> dibuja el frame en el segundo t (lo usa render.js)
+//   window.MOTION.duration(s)  -> duración en segundos de la versión s
 
 (() => {
   const W = 1920, H = 1080;
-  const DURATION = 16.5;
   const FPS = 30;
+
+  // ---------- Línea de tiempo ----------
+  // 0 – R0: entrada única de envases y proceso. Luego una ronda de RL s por
+  // problema (escaneo -> solución) y al final el cierre con el logo.
+  const R0 = 7.4, RL = 7.8, OUTRO = 3.4;
+  const makeSched = (rounds) => ({ rounds, outro: R0 + rounds.length * RL, dur: R0 + rounds.length * RL + OUTRO });
+  const schedFor = (s) => makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3]);
+  let SCHED = schedFor(0);
+  function roundAt(t) {
+    if (t < R0) return null;
+    const j = Math.min(SCHED.rounds.length - 1, Math.floor((t - R0) / RL));
+    return { j, i: SCHED.rounds[j], lt: t - R0 - j * RL };
+  }
+
+  // ---------- Logo ----------
+  const LOGO = {};
+  const logosReady = Promise.all(['mark', 'text_dark', 'text_light'].map((k) => new Promise((res) => {
+    const img = new Image();
+    img.onload = () => res();
+    img.onerror = () => res();
+    img.src = window.DA_LOGOS[k];
+    LOGO[k] = img;
+  })));
+  // Lockup horizontal original: isotipo 207 px + texto 406 px, alto 283 px.
+  function drawLogo(ctx, x, y, h, textKey, pulse = 0) {
+    const k = h / 283;
+    const mw = 207 * k, tw = 406 * k;
+    ctx.save();
+    ctx.translate(x + mw / 2, y + h / 2);
+    ctx.scale(1 + pulse, 1 + pulse);
+    ctx.drawImage(LOGO.mark, -mw / 2, -h / 2, mw, h);
+    ctx.restore();
+    ctx.drawImage(LOGO[textKey], x + mw, y, tw, h);
+    return mw + tw;
+  }
 
   // ---------- Paleta (ajustar a la marca si corresponde) ----------
   const C = {
@@ -17,9 +53,10 @@
     bg2: '#0f3a2e',
     grid: 'rgba(182,227,90,0.05)',
     green: '#2bb673',
-    greenDark: '#17845a',
     lime: '#b6e35a',
     teal: '#1fb6a6',
+    brand: '#08a2a7',      // turquesa del logo Desafío Ambiente
+    brandDark: '#067d81',
     cream: '#f4f1e8',
     muted: 'rgba(244,241,232,0.62)',
     red: '#ff5a4e',
@@ -124,16 +161,6 @@
     ctx.fillText(text, x + size * 0.7, y + h / 2 + 1);
     ctx.textBaseline = 'alphabetic';
     return w;
-  }
-
-  function heartPath(ctx, x, y, s) {
-    ctx.beginPath();
-    ctx.moveTo(x, y + s * 0.62);
-    ctx.bezierCurveTo(x - s * 0.15, y + s * 0.48, x - s * 0.95, y + s * 0.02, x - s * 0.95, y - s * 0.38);
-    ctx.bezierCurveTo(x - s * 0.95, y - s * 0.78, x - s * 0.42, y - s * 0.92, x, y - s * 0.5);
-    ctx.bezierCurveTo(x + s * 0.42, y - s * 0.92, x + s * 0.95, y - s * 0.78, x + s * 0.95, y - s * 0.38);
-    ctx.bezierCurveTo(x + s * 0.95, y + s * 0.02, x + s * 0.15, y + s * 0.48, x, y + s * 0.62);
-    ctx.closePath();
   }
 
   // ---------- Plásticos problemáticos ----------
@@ -356,27 +383,73 @@
     ctx.restore();
   }
 
-  function drawProblemCard(ctx, t, sol) {
-    const a = easeOut(prog(t, 1.0, 1.7)) * (1 - 0.55 * prog(t, 7.0, 7.8));
-    if (a <= 0) return;
+  function problemCards() {
+    const n = SCHED.rounds.length;
+    const cards = [{
+      s: 1.0, e: R0, tag: 'MATERIA PRIMA', tagCol: C.orange,
+      head: 'Plástico problemático', sub: 'Films, multicapa, PS y mezclas que hoy no se reciclan',
+    }];
+    SCHED.rounds.forEach((i, j) => cards.push({
+      s: R0 + j * RL + 0.1, e: j < n - 1 ? R0 + (j + 1) * RL : 1e9,
+      tag: n > 1 ? `PROBLEMA ${j + 1} / ${n}` : 'PROBLEMA', tagCol: C.red,
+      head: SOLUTIONS[i].problem, sub: 'Lo resolvemos con el plástico ya reconvertido',
+    }));
+    return cards;
+  }
+
+  function drawProblemCard(ctx, t) {
     const x = 110, y = 232, w = 600, h = 236;
+    for (const c of problemCards()) {
+      const inn = easeOut(prog(t, c.s, c.s + 0.5));
+      const out = prog(t, c.e - 0.2, c.e + 0.3);
+      const a = inn * (1 - out) * (1 - 0.45 * prog(t, SCHED.outro, SCHED.outro + 0.4));
+      if (a <= 0.01) continue;
+      const red = c.tagCol === C.red;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate((1 - inn) * -40 - easeIn(out) * 60, 0);
+      ctx.fillStyle = red ? 'rgba(255,90,78,0.10)' : 'rgba(255,159,67,0.10)';
+      ctx.strokeStyle = red ? 'rgba(255,90,78,0.55)' : 'rgba(255,159,67,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, 22);
+      ctx.fill();
+      ctx.stroke();
+      pill(ctx, x + 28, y + 26, c.tag, c.tagCol, '#fff', 18);
+      ctx.fillStyle = C.cream;
+      ctx.font = `800 34px ${FONT}`;
+      const last = wrapText(ctx, c.head, x + 28, y + 110, w - 56, 42);
+      ctx.fillStyle = C.muted;
+      ctx.font = `500 21px ${FONT}`;
+      wrapText(ctx, c.sub, x + 28, last + 40, w - 56, 28);
+      ctx.restore();
+    }
+  }
+
+  // El problema de cada ronda viaja como "ticket" desde la tarjeta a la caja.
+  function drawTicket(ctx, t) {
+    const r = roundAt(t);
+    if (!r) return;
+    const k = prog(r.lt, 0.5, 1.15);
+    if (k <= 0 || k >= 1) return;
+    const e = easeInOut(k);
+    const p = bez({ x: 690, y: 400 }, { x: 790, y: 380 }, { x: 760, y: 560 }, { x: BOX.cx - BOX.s / 2 + 10, y: BOX.cy + 20 }, e);
+    const sc = lerp(1, 0.45, e);
     ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate((1 - easeOut(prog(t, 1.0, 1.7))) * -40, 0);
-    ctx.fillStyle = 'rgba(255,90,78,0.10)';
-    ctx.strokeStyle = 'rgba(255,90,78,0.55)';
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = 1 - prog(k, 0.85, 1);
+    ctx.translate(p.x, p.y);
+    ctx.scale(sc, sc);
+    ctx.shadowColor = 'rgba(255,90,78,0.6)';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = C.red;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 22);
+    ctx.roundRect(-46, -26, 92, 52, 12);
     ctx.fill();
-    ctx.stroke();
-    pill(ctx, x + 28, y + 26, 'PROBLEMA', C.red, '#fff', 18);
-    ctx.fillStyle = C.cream;
-    ctx.font = `800 34px ${FONT}`;
-    const last = wrapText(ctx, sol.problem, x + 28, y + 110, w - 56, 42);
-    ctx.fillStyle = C.muted;
-    ctx.font = `500 21px ${FONT}`;
-    wrapText(ctx, '+ plástico problemático: films, multicapa, PS y mezclas sin reciclaje', x + 28, last + 40, w - 56, 28);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.font = `900 30px ${FONT}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(String(r.j + 1), 0, 11);
     ctx.restore();
   }
 
@@ -432,14 +505,17 @@
     ctx.restore();
   }
 
-  function beat(t) {
-    // latido doble cada 0.9 s durante el procesamiento
-    const k = prog(t, 4.3, 7.2);
-    if (k <= 0 || k >= 1) return 0;
-    const ph = ((t - 4.3) % 0.9) / 0.9;
+  function pulseIn(t, a, b) {
+    // latido doble cada 0.9 s dentro de la ventana [a, b]
+    if (t <= a || t >= b) return 0;
+    const ph = ((t - a) % 0.9) / 0.9;
     const b1 = Math.exp(-Math.pow((ph - 0.08) / 0.05, 2));
     const b2 = Math.exp(-Math.pow((ph - 0.28) / 0.06, 2)) * 0.7;
     return b1 + b2;
+  }
+  function beat(t) {
+    const r = roundAt(t);
+    return Math.max(pulseIn(t, 4.3, 7.2), r ? pulseIn(r.lt, 1.0, 1.85) : 0);
   }
 
   function drawBox(ctx, t) {
@@ -448,101 +524,64 @@
     if (a <= 0) return;
     const b = beat(t);
     const proc = prog(t, 4.3, 7.2);
-    const glow = (proc > 0 && proc < 1 ? 0.5 + 0.5 * b : 0) + (t > 8.8 ? 0.4 : 0);
-    const shake = proc > 0 && proc < 1 ? Math.sin(t * 60) * 1.6 * b : 0;
+    const busy = (proc > 0 && proc < 1) || (roundAt(t) && roundAt(t).lt < 2.0);
+    const glow = (busy ? 0.5 + 0.5 * b : 0) + (t > R0 ? 0.35 : 0);
+    const shake = busy ? Math.sin(t * 60) * 1.6 * b : 0;
     ctx.save();
     ctx.translate(cx + shake, cy);
     ctx.scale(a, a);
     ctx.translate(-cx, -cy);
     const L = cx - s / 2, T = cy - s / 2, Rr = cx + s / 2, B = cy + s / 2;
 
-    // halo
+    // halo turquesa (color de marca)
     if (glow > 0) {
       const hg = ctx.createRadialGradient(cx, cy, s * 0.2, cx, cy, s * 1.15);
-      hg.addColorStop(0, `rgba(182,227,90,${0.28 * glow})`);
-      hg.addColorStop(1, 'rgba(182,227,90,0)');
+      hg.addColorStop(0, `rgba(8,162,167,${0.45 * glow})`);
+      hg.addColorStop(1, 'rgba(8,162,167,0)');
       ctx.fillStyle = hg;
       ctx.fillRect(cx - s * 1.3, cy - s * 1.3, s * 2.6, s * 2.6);
     }
     // cara superior
-    ctx.fillStyle = '#5fd39a';
+    ctx.fillStyle = '#e3eeee';
     ctx.beginPath();
     ctx.moveTo(L, T); ctx.lineTo(Rr, T); ctx.lineTo(Rr + dx, T + dy); ctx.lineTo(L + dx, T + dy);
     ctx.closePath();
     ctx.fill();
-    // cara lateral
-    ctx.fillStyle = C.greenDark;
+    // cara lateral (turquesa de marca)
+    ctx.fillStyle = C.brandDark;
     ctx.beginPath();
     ctx.moveTo(Rr, T); ctx.lineTo(Rr + dx, T + dy); ctx.lineTo(Rr + dx, B + dy); ctx.lineTo(Rr, B);
     ctx.closePath();
     ctx.fill();
-    // cara frontal
+    // cara frontal blanca con el logo
     const fg = ctx.createLinearGradient(L, T, Rr, B);
-    fg.addColorStop(0, '#36c784');
-    fg.addColorStop(1, '#1f9d63');
+    fg.addColorStop(0, '#ffffff');
+    fg.addColorStop(1, '#e9f1f1');
     ctx.fillStyle = fg;
     ctx.fillRect(L, T, s, s);
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(L, T, s, s);
+    ctx.fillStyle = C.brand;
+    ctx.fillRect(L, B - 12, s, 12);
     // boca de entrada (izquierda) y salida (lateral)
     ctx.fillStyle = '#0b2b20';
     ctx.fillRect(L - 4, BELT_Y - 150, 14, 176);
-    ctx.fillStyle = '#0b2b20';
     ctx.beginPath();
     ctx.ellipse(Rr + dx / 2, cy + dy / 2 + 10, 10, 26, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // corazón
-    const hs = 58 * (1 + 0.16 * b);
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,255,255,0.6)';
-    ctx.shadowBlur = 24 * b;
-    heartPath(ctx, cx, cy - 50, hs);
-    ctx.fillStyle = C.cream;
-    ctx.fill();
-    ctx.restore();
-    // flechas circulares dentro del corazón (reconversión)
-    ctx.save();
-    ctx.translate(cx, cy - 56);
-    ctx.rotate(t * (proc > 0 && proc < 1 ? 4 : 0.6));
-    ctx.strokeStyle = C.green;
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    for (let k = 0; k < 3; k++) {
-      ctx.beginPath();
-      ctx.arc(0, 0, 20, k * 2.094 + 0.25, k * 2.094 + 1.75);
-      ctx.stroke();
-      const ang = k * 2.094 + 1.75;
-      ctx.fillStyle = C.green;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(ang) * 28, Math.sin(ang) * 28);
-      ctx.lineTo(Math.cos(ang) * 12, Math.sin(ang) * 12);
-      ctx.lineTo(Math.cos(ang + 0.45) * 20, Math.sin(ang + 0.45) * 20);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `900 50px ${FONT}`;
-    ctx.fillText('DESAFÍO', cx, cy + 70);
-    ctx.font = `700 21px ${FONT}`;
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.letterSpacing = '8px';
-    ctx.fillText('AMBIENTE', cx + 4, cy + 104);
-    ctx.letterSpacing = '0px';
+    // logo: el isotipo late como el corazón de Desafío
+    const lh = 118;
+    const lw = (613 / 283) * lh;
+    drawLogo(ctx, cx - lw / 2, cy - 92, lh, 'text_dark', 0.12 * b);
 
     // barra de proceso
     if (proc > 0) {
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillStyle = 'rgba(8,162,167,0.15)';
       ctx.beginPath();
-      ctx.roundRect(L + 40, B - 28, s - 80, 10, 5);
+      ctx.roundRect(L + 40, B - 56, s - 80, 10, 5);
       ctx.fill();
-      ctx.fillStyle = C.lime;
+      ctx.fillStyle = C.brand;
       ctx.beginPath();
-      ctx.roundRect(L + 40, B - 28, (s - 80) * easeInOut(proc), 10, 5);
+      ctx.roundRect(L + 40, B - 56, (s - 80) * easeInOut(proc), 10, 5);
       ctx.fill();
     }
     ctx.restore();
@@ -601,54 +640,74 @@
   }
 
   // ---------- Selección y tarjetas ----------
-  function highlightAt(t, chosen) {
-    const t0 = 7.4, D = 1.5;
-    if (t < t0) return -1;
-    const N = 9 + chosen;
+  // Tiempos locales de cada ronda (segundos desde su inicio)
+  const SCAN = [1.2, 2.6], DECIDE = 2.7, EXPAND = [2.8, 3.5], OUT = [3.5, 6.6], COLLAPSE = [7.0, 7.6];
+
+  function highlightAt(t) {
+    const r = roundAt(t);
+    if (!r || r.lt < SCAN[0] || r.lt >= DECIDE) return -1;
+    const N = 9 + r.i;
     let idx = 0;
     for (let k = 0; k < N; k++) {
-      const tk = t0 + D * Math.pow(k / (N - 1), 1.7);
-      if (t >= tk) idx = k;
+      if (r.lt >= SCAN[0] + (SCAN[1] - SCAN[0]) * Math.pow(k / (N - 1), 1.7)) idx = k;
     }
     return idx % 4;
   }
 
-  function connectorPts(i, t, chosen) {
+  // Estado de la ronda actual: elegido, expansión del panel y opacidad del resto.
+  function roundState(t) {
+    const r = roundAt(t);
+    if (!r) return { chosen: -1, decided: false, expand: 0, others: 1, r };
+    const decided = r.lt >= DECIDE && r.lt < COLLAPSE[1];
+    const expand = easeInOut(prog(r.lt, EXPAND[0], EXPAND[1])) * (1 - easeInOut(prog(r.lt, COLLAPSE[0], COLLAPSE[1])));
+    const others = clamp(1 - prog(r.lt, DECIDE, DECIDE + 0.4) + prog(r.lt, COLLAPSE[0] + 0.35, COLLAPSE[1] + 0.2));
+    return { chosen: r.i, decided, expand, others, r };
+  }
+
+  function isDone(i, t) {
+    const r = roundAt(t);
+    if (!r) return false;
+    return SCHED.rounds.some((ri, j) => ri === i && (j < r.j || (j === r.j && r.lt >= OUT[1] - 0.4)));
+  }
+
+  function rectFor(i, st) {
+    const r = cardRect(i);
+    if (i !== st.chosen || st.expand <= 0) return r;
+    const k = st.expand;
+    return { x: lerp(r.x, PANEL.x, k), y: lerp(r.y, PANEL.y, k), w: lerp(r.w, PANEL.w, k), h: lerp(r.h, PANEL.h, k) };
+  }
+
+  function connectorPts(i, st) {
     const p0 = outlet();
-    let r = cardRect(i);
-    if (i === chosen) {
-      const k = easeInOut(prog(t, 9.0, 9.8));
-      r = {
-        x: lerp(r.x, PANEL.x, k), y: lerp(r.y, PANEL.y, k),
-        w: lerp(r.w, PANEL.w, k), h: lerp(r.h, PANEL.h, k),
-      };
-    }
-    const p3 = { x: r.x, y: i === chosen ? lerp(r.y + r.h / 2, PANEL.y + PANEL.h / 2 - 20, easeInOut(prog(t, 9.0, 9.8))) : r.y + r.h / 2 };
+    const c = cardRect(i);
+    const r = rectFor(i, st);
+    const k = i === st.chosen ? st.expand : 0;
+    const p3 = { x: r.x, y: lerp(c.y + c.h / 2, PANEL.y + PANEL.h / 2 - 20, k) };
     const dxm = Math.max(60, (p3.x - p0.x) * 0.5);
     return [p0, { x: p0.x + dxm, y: p0.y }, { x: p3.x - dxm, y: p3.y }, p3];
   }
 
-  function drawConnectors(ctx, t, chosen) {
-    const hl = highlightAt(t, chosen);
-    const decided = t >= 8.9;
+  function drawConnectors(ctx, t) {
+    const hl = highlightAt(t);
+    const st = roundState(t);
     for (let i = 0; i < 4; i++) {
       const appear = easeOut(prog(t, 1.2 + i * 0.15, 1.9 + i * 0.15));
       if (appear <= 0) continue;
-      let alpha = 0.22 * appear;
-      let col = C.cream;
+      let alpha = (isDone(i, t) ? 0.45 : 0.22) * appear;
+      let col = isDone(i, t) ? C.lime : C.cream;
       let lw = 3;
-      if (!decided && hl === i) { alpha = 0.95; col = C.lime; lw = 5; }
-      if (decided) {
-        if (i === chosen) { alpha = 1; col = C.lime; lw = 6; }
-        else alpha *= 1 - prog(t, 8.9, 9.4);
-      }
+      if (!st.decided && hl === i) { alpha = 0.95; col = C.lime; lw = 5; }
+      if (st.decided) {
+        if (i === st.chosen) { alpha = 1; col = C.lime; lw = 6; }
+        else alpha *= st.others;
+      } else if (i !== st.chosen) alpha *= st.others;
       if (alpha <= 0.01) continue;
-      const [p0, p1, p2, p3] = connectorPts(i, t, chosen);
+      const [p0, p1, p2, p3] = connectorPts(i, st);
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = col;
       ctx.lineWidth = lw;
-      ctx.setLineDash(decided && i === chosen ? [] : [10, 10]);
+      ctx.setLineDash(st.decided && i === st.chosen ? [] : [10, 10]);
       ctx.lineDashOffset = -t * 40;
       ctx.beginPath();
       ctx.moveTo(p0.x, p0.y);
@@ -657,12 +716,14 @@
       ctx.restore();
     }
     // flujo de pellets por el conector elegido
-    if (t > 9.0) {
-      const [p0, p1, p2, p3] = connectorPts(chosen, t, chosen);
-      const fade = 1 - prog(t, 13.4, 14.0);
+    const r = st.r;
+    if (r && r.lt > EXPAND[0] && r.lt < OUT[1] + 0.3) {
+      const [p0, p1, p2, p3] = connectorPts(st.chosen, st);
+      const lt = r.lt - EXPAND[0];
+      const fade = 1 - prog(r.lt, OUT[1] - 0.3, OUT[1] + 0.2);
       FLOW.forEach((f) => {
-        const u = ((t - 9.0) * 0.55 + f.p) % 1;
-        if ((t - 9.0) * 0.55 < f.p) return;
+        if (lt * 0.55 < f.p) return;
+        const u = (lt * 0.55 + f.p) % 1;
         const pt = bez(p0, p1, p2, p3, u);
         ctx.globalAlpha = fade * Math.sin(u * Math.PI);
         ctx.fillStyle = f.c;
@@ -674,36 +735,52 @@
     }
   }
 
-  function drawCards(ctx, t, chosen) {
-    const hl = highlightAt(t, chosen);
-    const decided = t >= 8.9;
-    for (let i = 0; i < 4; i++) {
+  function drawCheck(ctx, x, y, rad) {
+    ctx.fillStyle = C.lime;
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0b2b20';
+    ctx.lineWidth = rad * 0.22;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - rad * 0.5, y); ctx.lineTo(x - rad * 0.1, y + rad * 0.45); ctx.lineTo(x + rad * 0.55, y - rad * 0.45);
+    ctx.stroke();
+  }
+
+  function drawCards(ctx, t) {
+    const hl = highlightAt(t);
+    const st = roundState(t);
+    // el panel expandido se dibuja al final, encima del resto
+    const order = [0, 1, 2, 3].filter((i) => i !== st.chosen).concat(st.chosen >= 0 ? [st.chosen] : []);
+    for (const i of order) {
       const appear = easeOut(prog(t, 1.2 + i * 0.15, 1.9 + i * 0.15));
       if (appear <= 0) continue;
-      let r = cardRect(i);
-      let alpha = appear;
-      let active = (!decided && hl === i) || (decided && i === chosen);
-      let expand = 0;
-      if (decided && i !== chosen) alpha *= 1 - prog(t, 8.9, 9.4);
-      if (decided && i === chosen) {
-        expand = easeInOut(prog(t, 9.0, 9.8));
-        r = { x: lerp(r.x, PANEL.x, expand), y: lerp(r.y, PANEL.y, expand), w: lerp(r.w, PANEL.w, expand), h: lerp(r.h, PANEL.h, expand) };
-      }
+      const r = rectFor(i, st);
+      const isChosen = i === st.chosen;
+      let alpha = appear * (isChosen && (st.decided || st.expand > 0) ? 1 : st.others);
+      const active = (!st.decided && hl === i) || (st.decided && isChosen);
+      const expand = isChosen ? st.expand : 0;
       if (alpha <= 0.01) continue;
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate((1 - appear) * 40, 0);
-      const pop = active && !decided ? 1.04 : 1;
+      const pop = active && !st.decided ? 1.04 : 1;
       ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
       ctx.scale(pop, pop);
       ctx.translate(-(r.x + r.w / 2), -(r.y + r.h / 2));
       ctx.fillStyle = active ? 'rgba(182,227,90,0.14)' : C.card;
+      if (expand > 0) ctx.fillStyle = '#123d30';
       ctx.strokeStyle = active ? C.lime : C.cardLine;
       ctx.lineWidth = active ? 3 : 2;
       if (active) { ctx.shadowColor = 'rgba(182,227,90,0.45)'; ctx.shadowBlur = 30; }
       ctx.beginPath();
       ctx.roundRect(r.x, r.y, r.w, r.h, 22);
       ctx.fill();
+      if (expand > 0) {
+        ctx.fillStyle = 'rgba(182,227,90,0.14)';
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
       ctx.stroke();
       // número
@@ -723,38 +800,34 @@
       ctx.fillStyle = C.muted;
       ctx.font = `500 19px ${FONT}`;
       ctx.fillText(SOLUTIONS[i].sub, r.x + 140, r.y + 90);
+      // solución ya entregada
+      if (isDone(i, t) && expand < 0.05) drawCheck(ctx, r.x + r.w - 32, r.y + 32, 15);
       // contenido del panel
-      if (expand > 0.98) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(r.x, r.y, r.w, r.h, 22);
-        ctx.clip();
-        const s = prog(t, 9.8, 13.6);
-        const area = { x: r.x + 30, y: r.y + 140, w: r.w - 60, h: r.h - 240 };
-        ctx.globalAlpha = alpha * easeOut(prog(t, 9.8, 10.2));
-        ctx.strokeStyle = C.cardLine;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(r.x + 30, r.y + 124); ctx.lineTo(r.x + r.w - 30, r.y + 124);
-        ctx.stroke();
-        OUTCOMES[i](ctx, area, s, t);
-        // resultado
-        const ra = easeOut(prog(t, 12.8, 13.4));
-        ctx.globalAlpha = alpha * ra;
-        ctx.fillStyle = C.lime;
-        ctx.beginPath();
-        ctx.arc(r.x + 48, r.y + r.h - 54, 18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#0b2b20';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(r.x + 39, r.y + r.h - 54); ctx.lineTo(r.x + 46, r.y + r.h - 46); ctx.lineTo(r.x + 58, r.y + r.h - 62);
-        ctx.stroke();
-        ctx.fillStyle = C.cream;
-        ctx.font = `700 22px ${FONT}`;
-        ctx.fillText(SOLUTIONS[i].result, r.x + 80, r.y + r.h - 46);
-        ctx.restore();
+      if (isChosen && st.r) {
+        const lt = st.r.lt;
+        const ca = easeOut(prog(lt, OUT[0], OUT[0] + 0.3)) * (1 - prog(lt, COLLAPSE[0] - 0.25, COLLAPSE[0]));
+        if (ca > 0 && expand > 0.98) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(r.x, r.y, r.w, r.h, 22);
+          ctx.clip();
+          const s = prog(lt, OUT[0], OUT[1]);
+          const area = { x: r.x + 30, y: r.y + 140, w: r.w - 60, h: r.h - 240 };
+          ctx.globalAlpha = alpha * ca;
+          ctx.strokeStyle = C.cardLine;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(r.x + 30, r.y + 124); ctx.lineTo(r.x + r.w - 30, r.y + 124);
+          ctx.stroke();
+          OUTCOMES[i](ctx, area, s, t);
+          // resultado
+          ctx.globalAlpha = alpha * ca * easeOut(prog(lt, OUT[1] - 0.5, OUT[1] - 0.1));
+          drawCheck(ctx, r.x + 48, r.y + r.h - 54, 18);
+          ctx.fillStyle = C.cream;
+          ctx.font = `700 22px ${FONT}`;
+          ctx.fillText(SOLUTIONS[i].result, r.x + 80, r.y + r.h - 46);
+          ctx.restore();
+        }
       }
       ctx.restore();
     }
@@ -1177,41 +1250,54 @@
   const OUTCOMES = [outcomeConstruction, outcomeBench, outcomeLab, outcomeDigital];
 
   function drawOutro(ctx, t) {
-    const a = easeOut(prog(t, 13.8, 14.5));
-    if (a <= 0) return;
+    const t0 = SCHED.outro;
+    const d = easeOut(prog(t, t0, t0 + 0.6));
+    if (d <= 0) return;
     ctx.save();
+    ctx.fillStyle = `rgba(7,26,21,${0.94 * d})`;
+    ctx.fillRect(0, 0, W, H);
+    const a = easeOut(prog(t, t0 + 0.3, t0 + 1.1));
     ctx.globalAlpha = a;
-    ctx.translate(0, (1 - a) * 20);
+    const lh = 250;
+    const lw = (613 / 283) * lh;
+    const sc = lerp(0.92, 1, a);
+    ctx.translate(W / 2, 470);
+    ctx.scale(sc, sc);
+    drawLogo(ctx, -lw / 2, -lh / 2, lh, 'text_light', 0.06 * pulseIn(t, t0 + 1.0, t0 + 2.0));
+    ctx.restore();
+    const b = easeOut(prog(t, t0 + 0.8, t0 + 1.5));
+    ctx.save();
+    ctx.globalAlpha = b;
+    ctx.translate(0, (1 - b) * 16);
     ctx.textAlign = 'center';
     ctx.fillStyle = C.cream;
-    ctx.font = `800 36px ${FONT}`;
-    ctx.fillText('Tomamos el plástico problemático y lo reconvertimos en soluciones.', W / 2, 990);
+    ctx.font = `800 38px ${FONT}`;
+    ctx.fillText('Tomamos el plástico problemático y lo reconvertimos en soluciones.', W / 2, 700);
     ctx.fillStyle = C.lime;
-    ctx.font = `700 22px ${FONT}`;
-    ctx.letterSpacing = '6px';
-    ctx.fillText('DESAFÍO AMBIENTE', W / 2 + 3, 1034);
-    ctx.letterSpacing = '0px';
+    ctx.font = `600 26px ${FONT}`;
+    ctx.fillText(SCHED.rounds.map((i) => SOLUTIONS[i].title).join('  ·  '), W / 2, 752);
     ctx.restore();
   }
 
-  function renderFrame(t, chosen) {
+  function renderFrame(t) {
     const ctx = document.getElementById('stage').getContext('2d');
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     ctx.textAlign = 'left';
     drawBackground(ctx, t);
     drawTitle(ctx, t);
-    drawProblemCard(ctx, t, SOLUTIONS[chosen]);
-    drawConnectors(ctx, t, chosen);
+    drawProblemCard(ctx, t);
+    drawConnectors(ctx, t);
     drawBelt(ctx, t);
     drawItems(ctx, t);
     drawPellets(ctx, t);
     drawBox(ctx, t);
+    drawTicket(ctx, t);
     drawProcessSteps(ctx, t);
-    drawCards(ctx, t, chosen);
+    drawCards(ctx, t);
     drawOutro(ctx, t);
     // fundido de entrada / salida
-    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, DURATION - 0.4, DURATION));
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, SCHED.dur - 0.4, SCHED.dur));
     if (fade > 0) {
       ctx.fillStyle = `rgba(7,26,21,${fade})`;
       ctx.fillRect(0, 0, W, H);
@@ -1219,8 +1305,11 @@
     ctx.restore();
   }
 
-  window.MOTION = { DURATION, FPS, W, H };
-  window.renderFrame = (t, s) => renderFrame(t, (s || 1) - 1);
+  window.MOTION = { FPS, W, H, duration: (s) => schedFor(s).dur, ready: logosReady };
+  window.renderFrame = (t, s) => {
+    SCHED = schedFor(s);
+    renderFrame(t);
+  };
 
   // ---------- Vista previa ----------
   const params = new URLSearchParams(location.search);
@@ -1228,16 +1317,16 @@
     document.body.classList.add('render');
     return;
   }
-  let sel = clamp(parseInt(params.get('s') || '1', 10) || 1, 1, 4);
+  let sel = clamp(parseInt(params.get('s') || '0', 10) || 0, 0, 4);
   let start = performance.now();
   const buttons = document.querySelectorAll('#controls button');
   const mark = () => buttons.forEach((b) => b.classList.toggle('on', +b.dataset.s === sel));
   buttons.forEach((b) => b.addEventListener('click', () => { sel = +b.dataset.s; start = performance.now(); mark(); }));
   mark();
-  document.fonts.ready.then(() => {
+  Promise.all([document.fonts.ready, logosReady]).then(() => {
     const loop = (now) => {
-      const t = ((now - start) / 1000) % DURATION;
-      renderFrame(t, sel - 1);
+      SCHED = schedFor(sel);
+      renderFrame(((now - start) / 1000) % SCHED.dur);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
