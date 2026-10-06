@@ -16,11 +16,12 @@
   // 0 – R0: entrada única de envases y proceso. Luego una ronda de RL s por
   // problema (escaneo -> solución) y al final el cierre con el logo.
   const R0 = 7.4, RL = 7.8, OUTRO = 3.4;
+  const MS = 6.5; // apertura con el propósito de Desafío
   const TL = 14.5; // duración de la intro con la línea de tiempo
-  // s = 0: intro con la línea de tiempo + las 4 soluciones; 1-4: una solución;
-  // 5: solo la línea de tiempo.
+  // s = 0: propósito + línea de tiempo + las 4 soluciones; 1-4: una solución;
+  // 5: solo propósito + línea de tiempo.
   const makeSched = (rounds, intro) => ({ rounds, intro, outro: R0 + rounds.length * RL, dur: intro + R0 + rounds.length * RL + OUTRO });
-  const schedFor = (s) => (s === 5 ? { ...makeSched([0], TL), dur: TL } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? TL : 0));
+  const schedFor = (s) => (s === 5 ? { ...makeSched([0], MS + TL), dur: MS + TL } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? MS + TL : 0));
   let SCHED = schedFor(0);
   function roundAt(t) {
     if (t < R0) return null;
@@ -1274,12 +1275,147 @@
     ctx.translate(0, (1 - b) * 16);
     ctx.textAlign = 'center';
     ctx.fillStyle = C.cream;
-    ctx.font = `800 38px ${FONT}`;
-    ctx.fillText('Tomamos el plástico problemático y lo reconvertimos en soluciones.', W / 2, 700);
+    ctx.font = `900 50px ${FONT}`;
+    ctx.fillText('ELIMINAR EL PLÁSTICO DEL PLANETA', W / 2, 700);
     ctx.fillStyle = C.lime;
-    ctx.font = `600 26px ${FONT}`;
-    ctx.fillText(SCHED.rounds.map((i) => SOLUTIONS[i].title).join('  ·  '), W / 2, 752);
+    ctx.font = `700 32px ${FONT}`;
+    ctx.fillText('creando soluciones aplicables y comerciales', W / 2, 752);
+    ctx.fillStyle = C.muted;
+    ctx.font = `600 24px ${FONT}`;
+    ctx.fillText(SCHED.rounds.map((i) => SOLUTIONS[i].title).join('  ·  '), W / 2, 806);
     ctx.restore();
+  }
+
+  // ---------- Apertura: el propósito con el que nació Desafío ----------
+  const GLOBE = { x: W / 2, y: 430, r: 165 };
+  // continentes como manchas en coordenadas unitarias (x en [-1, 3) se repite al rotar)
+  const LANDS = [
+    [[-0.55, -0.35, 0.32], [-0.35, -0.1, 0.28], [-0.5, 0.15, 0.2], [-0.3, 0.45, 0.18]],
+    [[0.35, -0.45, 0.25], [0.55, -0.2, 0.3], [0.45, 0.2, 0.24], [0.6, 0.5, 0.16]],
+    [[1.25, -0.3, 0.3], [1.5, -0.05, 0.26], [1.3, 0.35, 0.22]],
+    [[2.2, -0.4, 0.22], [2.4, 0.1, 0.3], [2.25, 0.45, 0.18]],
+  ];
+  const ORBIT = [drawBottle, drawBag, drawCup, drawPacket, drawTray, drawBottle, drawBag, drawPacket];
+  const mixHex = (a, b, k) => {
+    const pa = a.match(/\w\w/g).map((h) => parseInt(h, 16));
+    const pb = b.match(/\w\w/g).map((h) => parseInt(h, 16));
+    return `rgb(${pa.map((v, i) => Math.round(lerp(v, pb[i], k))).join(',')})`;
+  };
+
+  function drawGlobe(ctx, t, clean) {
+    const { x, y, r } = GLOBE;
+    ctx.save();
+    // halo
+    const hg = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 1.6);
+    hg.addColorStop(0, `rgba(8,162,167,${0.35 * clean})`);
+    hg.addColorStop(1, 'rgba(8,162,167,0)');
+    ctx.fillStyle = hg;
+    ctx.fillRect(x - r * 1.7, y - r * 1.7, r * 3.4, r * 3.4);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = mixHex('#4d5a57', '#08a2a7', clean);
+    ctx.fill();
+    ctx.clip();
+    const rot = (t * 0.12) % 3;
+    ctx.fillStyle = mixHex('#7b7360', '#7ccf5a', clean);
+    LANDS.forEach((land) => land.forEach(([lx, ly, lr]) => {
+      for (const off of [0, -3, 3]) {
+        const ux = lx - rot + off;
+        if (ux < -1.4 || ux > 1.4) continue;
+        ctx.beginPath();
+        ctx.arc(x + ux * r, y + ly * r, lr * r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }));
+    // sombreado esférico
+    const sg = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.2, x, y, r);
+    sg.addColorStop(0, 'rgba(255,255,255,0.18)');
+    sg.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = sg;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
+  function drawMission(ctx, t) {
+    drawBackground(ctx, t);
+    const clean = easeInOut(prog(t, 2.6, 3.9));
+    drawGlobe(ctx, t, clean);
+
+    // plásticos orbitando que se eliminan y se convierten en pellets
+    ORBIT.forEach((draw, k) => {
+      const ang = (k / ORBIT.length) * Math.PI * 2 + t * 0.35;
+      const rr = 255 + Math.sin(t * 1.3 + k) * 12;
+      const px = GLOBE.x + Math.cos(ang) * rr * 1.35;
+      const py = GLOBE.y + Math.sin(ang) * rr * 0.62;
+      const kill = prog(t, 2.3 + k * 0.12, 2.75 + k * 0.12);
+      const appear = easeBack(prog(t, 0.2 + k * 0.08, 0.7 + k * 0.08));
+      if (kill < 1 && appear > 0) {
+        ctx.save();
+        ctx.globalAlpha = clamp(appear) * (1 - kill);
+        ctx.translate(px, py + 40);
+        ctx.rotate(Math.sin(t * 2 + k) * 0.25);
+        const sc = 0.75 * appear * (1 - 0.7 * kill);
+        draw(ctx, sc);
+        ctx.restore();
+      }
+      if (kill > 0) {
+        const burst = prog(t, 2.3 + k * 0.12, 3.6 + k * 0.12);
+        if (burst < 1) {
+          for (let q = 0; q < 6; q++) {
+            const a2 = (q / 6) * Math.PI * 2 + k;
+            ctx.globalAlpha = 1 - burst;
+            ctx.fillStyle = [C.green, C.lime, C.teal][q % 3];
+            ctx.beginPath();
+            ctx.arc(px + Math.cos(a2) * 70 * easeOut(burst), py + Math.sin(a2) * 70 * easeOut(burst), 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+      }
+    });
+
+    // texto
+    ctx.save();
+    ctx.textAlign = 'center';
+    const la = easeOut(prog(t, 0.2, 0.9));
+    ctx.globalAlpha = la;
+    ctx.fillStyle = C.muted;
+    ctx.font = `700 22px ${FONT}`;
+    ctx.letterSpacing = '6px';
+    ctx.fillText('POR QUÉ NACIÓ DESAFÍO AMBIENTE · 2015', W / 2 + 3, 110);
+    ctx.letterSpacing = '0px';
+    const l1 = easeOut(prog(t, 0.9, 1.6));
+    ctx.globalAlpha = l1;
+    ctx.font = `900 84px ${FONT}`;
+    const parts = [['ELIMINAR EL ', C.cream], ['PLÁSTICO', clean > 0.5 ? C.lime : C.red], [' DEL PLANETA', C.cream]];
+    const total = parts.reduce((s, [p]) => s + ctx.measureText(p).width, 0);
+    let x = W / 2 - total / 2;
+    ctx.textAlign = 'left';
+    parts.forEach(([p, col]) => {
+      ctx.fillStyle = col;
+      ctx.fillText(p, x, 760 + (1 - l1) * 24);
+      x += ctx.measureText(p).width;
+    });
+    ctx.textAlign = 'center';
+    const l2 = easeOut(prog(t, 3.5, 4.2));
+    ctx.globalAlpha = l2;
+    ctx.fillStyle = C.lime;
+    ctx.font = `700 44px ${FONT}`;
+    ctx.fillText('creando soluciones aplicables y comerciales', W / 2, 840 + (1 - l2) * 18);
+    ctx.restore();
+    const lg = easeOut(prog(t, 4.4, 5.0));
+    if (lg > 0) {
+      ctx.save();
+      ctx.globalAlpha = lg;
+      const h = 70, w = (613 / 283) * h;
+      drawLogo(ctx, W / 2 - w / 2, 930, h, 'text_light');
+      ctx.restore();
+    }
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, MS - 0.6, MS));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   // ---------- Intro: línea de tiempo 2015 – 2026 ----------
@@ -1578,7 +1714,8 @@
       const ctx = document.getElementById('stage').getContext('2d');
       ctx.save();
       ctx.textAlign = 'left';
-      drawTimeline(ctx, t);
+      if (t < MS) drawMission(ctx, t);
+      else drawTimeline(ctx, t - MS);
       ctx.restore();
     } else renderFrame(t - SCHED.intro);
   }
