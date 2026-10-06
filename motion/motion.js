@@ -33,9 +33,9 @@
   const SOLUTIONS = [
     {
       title: 'Construcción',
-      sub: 'Materiales y paneles para obra',
-      problem: 'Una obra necesita materiales de bajo impacto',
-      result: 'Ladrillos y paneles de plástico reconvertido',
+      sub: 'Madera plástica · tablas 1×4',
+      problem: 'Una obra necesita madera durable y de bajo impacto',
+      result: 'Madera plástica: tablas, vigas y postes',
     },
     {
       title: 'Equipamiento urbano',
@@ -243,24 +243,22 @@
 
   // ---------- Íconos de soluciones (trazo) ----------
   function iconConstruction(ctx, x, y, s, col) {
+    // pila de tablas vista desde la testa
     ctx.save();
     ctx.translate(x, y);
     ctx.strokeStyle = col;
-    ctx.lineWidth = 3.2;
+    ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
-    const bw = 20 * s, bh = 10 * s;
+    const bw = 16 * s, bh = 7 * s, dx = 14 * s, dy = -10 * s;
+    const x0 = -30 * s, y0 = 20 * s;
     for (let r = 0; r < 3; r++) {
-      const y = 18 * s - (r + 1) * bh;
-      ctx.strokeRect(-30 * s, y, 60 * s, bh);
-      const xs = r % 2 ? [-10 * s, 10 * s] : [-20 * s, 0, 20 * s];
-      ctx.beginPath();
-      xs.forEach((x) => { ctx.moveTo(x, y); ctx.lineTo(x, y + bh); });
-      ctx.stroke();
+      for (let c = 0; c < 3; c++) ctx.strokeRect(x0 + c * bw, y0 - (r + 1) * bh, bw, bh);
     }
+    const top = y0 - 3 * bh, right = x0 + 3 * bw;
     ctx.beginPath();
-    ctx.moveTo(-30 * s, -16 * s);
-    ctx.lineTo(0, -30 * s);
-    ctx.lineTo(30 * s, -16 * s);
+    ctx.moveTo(x0, top); ctx.lineTo(x0 + dx, top + dy); ctx.lineTo(right + dx, top + dy);
+    ctx.lineTo(right + dx, y0 + dy); ctx.lineTo(right, y0);
+    ctx.moveTo(right, top); ctx.lineTo(right + dx, top + dy);
     ctx.stroke();
     ctx.restore();
   }
@@ -784,57 +782,160 @@
     }
   }
 
-  function outcomeConstruction(ctx, a, s) {
-    const gy = a.y + a.h - 10;
-    ground(ctx, a, gy);
-    const bw = 72, bh = 34, cols = 5, rows = 5;
-    const wallW = bw * cols;
-    const x0 = a.x + (a.w - wallW) / 2;
-    const total = cols * rows;
-    let k = 0;
+  // Pieza de madera plástica en proyección oblicua.
+  // (x, y) = esquina inferior izquierda de la testa; D = largo de la pieza.
+  function lumber(ctx, x, y, w, h, D, seed) {
+    const edge = 'rgba(20,12,6,0.55)';
+    // cara superior
+    ctx.fillStyle = '#7a5c43';
+    ctx.beginPath();
+    ctx.moveTo(x, y - h); ctx.lineTo(x + w, y - h); ctx.lineTo(x + w + D.x, y - h + D.y); ctx.lineTo(x + D.x, y - h + D.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // veta a lo largo
+    ctx.strokeStyle = 'rgba(40,25,12,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const f of [0.3, 0.62]) {
+      ctx.moveTo(x + w * f + D.x * 0.04, y - h + D.y * 0.04);
+      ctx.lineTo(x + w * f + D.x * 0.96, y - h + D.y * 0.96);
+    }
+    ctx.stroke();
+    // cara lateral
+    ctx.fillStyle = '#5a4130';
+    ctx.beginPath();
+    ctx.moveTo(x + w, y - h); ctx.lineTo(x + w + D.x, y - h + D.y); ctx.lineTo(x + w + D.x, y + D.y); ctx.lineTo(x + w, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // testa (corte 1×4) con pigmento reciclado
+    ctx.save();
+    recycledFill(ctx, x, y - h, w, h, '#a3815f', seed);
+    ctx.restore();
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(x, y - h, w, h);
+  }
+
+  // Lote de piezas: cols × rows, aparecen saliendo desde el fondo (extrusión).
+  function lumberLot(ctx, x, y, w, h, cols, rows, D, s0, s1, s, seed) {
+    const n = cols * rows;
     for (let r = 0; r < rows; r++) {
-      const odd = r % 2 === 1;
-      const pieces = odd ? [[0, 0.5], [0.5, 1], [1.5, 1], [2.5, 1], [3.5, 1], [4.5, 0.5]] : [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]];
-      for (const [px, pw] of pieces) {
-        const st = (k / (total + 5)) * 0.6;
-        const p = prog(s, st, st + 0.07);
-        k++;
+      for (let c = 0; c < cols; c++) {
+        const k = r * cols + c;
+        const st = lerp(s0, s1, k / n);
+        const p = easeOut(prog(s, st, st + (s1 - s0) / n * 3));
         if (p <= 0) continue;
-        const y = gy - (r + 1) * bh - (1 - easeOut(p)) * 80;
+        const back = (1 - p) * 0.7;
         ctx.save();
-        ctx.globalAlpha *= p;
-        recycledFill(ctx, x0 + px * bw + 2, y + 2, pw * bw - 4, bh - 4, ['#3fbf7f', '#2fa86c', '#4fc98a'][(r + k) % 3], k);
+        ctx.globalAlpha *= clamp(p * 1.6);
+        lumber(ctx, x + c * w + D.x * back, y - r * h + D.y * back, w, h, D, seed + k);
         ctx.restore();
       }
     }
-    // techo
-    const rp = easeBack(prog(s, 0.66, 0.8));
-    if (rp > 0) {
-      const top = gy - rows * bh;
-      const yo = (1 - rp) * -90;
+  }
+
+  function strap(ctx, x, y, W, Hh, D, f) {
+    ctx.strokeStyle = C.lime;
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x + D.x * f, y - Hh + D.y * f);
+    ctx.lineTo(x + W + D.x * f, y - Hh + D.y * f);
+    ctx.lineTo(x + W + D.x * f, y + D.y * f);
+    ctx.stroke();
+  }
+
+  function outcomeConstruction(ctx, a, s) {
+    // --- Lote de tablas 1×4 de 2,8 m ---
+    const bw = 56, bh = 14, cols = 5, rows = 6;
+    const D = { x: 210, y: -105 };
+    const x0 = a.x + 20, y0 = a.y + 250;
+    const LW = bw * cols, LH = bh * rows;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x0 + LW / 2 + D.x / 2, y0 + D.y / 2 + 6, 260, 30, Math.atan2(D.y, D.x) * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    lumberLot(ctx, x0, y0, bw, bh, cols, rows, D, 0.02, 0.5, s, 1);
+
+    // zunchos del lote
+    const sp = easeOut(prog(s, 0.52, 0.6));
+    if (sp > 0) {
       ctx.save();
-      ctx.globalAlpha *= clamp(rp * 2);
-      ctx.fillStyle = C.orange;
-      ctx.beginPath();
-      ctx.moveTo(x0 - 30, top + yo);
-      ctx.lineTo(x0 + wallW / 2, top - 120 + yo);
-      ctx.lineTo(x0 + wallW + 30, top + yo);
-      ctx.closePath();
-      ctx.fill();
+      ctx.globalAlpha *= sp;
+      strap(ctx, x0, y0, LW, LH, D, 0.22);
+      strap(ctx, x0, y0, LW, LH, D, 0.78);
       ctx.restore();
     }
-    // puerta y ventana
-    const dp = easeOut(prog(s, 0.8, 0.9));
-    if (dp > 0) {
+
+    // cotas: largo 2,8 m y sección 1×4
+    const cp = easeOut(prog(s, 0.56, 0.68));
+    if (cp > 0) {
       ctx.save();
-      ctx.globalAlpha *= dp;
-      ctx.fillStyle = '#0b2b20';
+      ctx.globalAlpha *= cp;
+      const len = Math.hypot(D.x, D.y);
+      const nx = D.y / len, ny = -D.x / len; // normal hacia arriba-izquierda
+      const ax = x0 + nx * 22, ay = y0 - LH + ny * 22;
+      const bx = ax + D.x * cp, by = ay + D.y * cp;
+      ctx.strokeStyle = C.cream;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(x0 + wallW / 2 - 30, gy - 100 * dp, 60, 100 * dp, [10, 10, 0, 0]);
-      ctx.fill();
-      ctx.fillStyle = '#bfe9ff';
-      ctx.fillRect(x0 + 40, gy - 130, 56, 46);
-      ctx.fillRect(x0 + wallW - 96, gy - 130, 56, 46);
+      ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+      ctx.moveTo(ax - nx * 8, ay - ny * 8); ctx.lineTo(ax + nx * 8, ay + ny * 8);
+      ctx.moveTo(bx - nx * 8, by - ny * 8); ctx.lineTo(bx + nx * 8, by + ny * 8);
+      ctx.stroke();
+      ctx.save();
+      ctx.translate((ax + bx) / 2 + nx * 16, (ay + by) / 2 + ny * 16);
+      ctx.rotate(Math.atan2(D.y, D.x));
+      ctx.fillStyle = C.cream;
+      ctx.font = `800 24px ${FONT}`;
+      ctx.textAlign = 'center';
+      ctx.fillText('2,8 m', 0, 0);
+      ctx.restore();
+      // sección de una tabla
+      const tx = x0 + (cols - 1) * bw, ty = y0 - bh;
+      ctx.strokeStyle = C.lime;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(tx, ty, bw, bh);
+      ctx.beginPath();
+      ctx.moveTo(tx + bw, ty + bh / 2);
+      ctx.lineTo(tx + bw + 44, ty + bh / 2 + 4);
+      ctx.stroke();
+      ctx.fillStyle = C.lime;
+      ctx.font = `900 26px ${FONT}`;
+      ctx.fillText('1×4"', tx + bw + 50, ty + bh / 2 + 13);
+      ctx.restore();
+    }
+    // etiqueta del lote
+    const tp = easeBack(prog(s, 0.6, 0.7));
+    if (tp > 0) {
+      ctx.save();
+      ctx.translate(a.x + 300, a.y + 8);
+      ctx.scale(tp, tp);
+      pill(ctx, 0, 0, 'LOTE · TABLAS 1×4', C.lime, '#0b2b20', 16);
+      ctx.restore();
+    }
+
+    // --- Vigas y postes ---
+    const gp = prog(s, 0.68, 0.9);
+    if (gp > 0) {
+      const d2 = { x: 110, y: -55 };
+      const by = a.y + 392;
+      lumberLot(ctx, a.x + 20, by, 28, 68, 3, 1, d2, 0.68, 0.8, s, 40);
+      lumberLot(ctx, a.x + 290, by, 34, 34, 3, 2, d2, 0.76, 0.9, s, 60);
+      ctx.save();
+      ctx.globalAlpha *= easeOut(prog(s, 0.74, 0.84));
+      ctx.fillStyle = C.cream;
+      ctx.font = `800 20px ${FONT}`;
+      ctx.fillText('Vigas', a.x + 20, by - 80);
+      ctx.globalAlpha /= Math.max(1e-6, easeOut(prog(s, 0.74, 0.84)));
+      ctx.globalAlpha *= easeOut(prog(s, 0.82, 0.92));
+      ctx.fillText('Postes', a.x + 290, by - 78);
       ctx.restore();
     }
   }

@@ -2,7 +2,7 @@
 
 Un problema (un desafío más el plástico problemático) entra a la caja **Desafío**, se procesa (Recolectar → Clasificar → Reconvertir) y sale como una de 4 soluciones:
 
-1. Construcción
+1. Construcción (madera plástica: lotes de tablas 1×4 de 2,8 m, vigas y postes)
 2. Equipamiento urbano
 3. Proyecto I+D
 4. Solución digital (problema normativo y sostenible, p. ej. Ley REP)
