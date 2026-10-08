@@ -12,13 +12,15 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 ## Videos (1920×1080, 30 fps)
 
 - `motion/out/desafio_corazon_4_soluciones.mp4`: video completo: línea de tiempo + una sola entrada de envases + los 4 problemas escaneados seguidos (70 s); cierra con el logo y el propósito
+- `motion/out/desafio_holding_resumen.mp4`: **mini video resumen del holding** (41 s): propósito → las 5 unidades de negocio y su modelo (Desafío Ambiente, Everwood, La Tienda Sustentable, Desafío Lab, Link Circular) → foco como empresaria → cierre
 - `motion/out/desafio_intro.mp4`: solo la intro: propósito, holding y línea de tiempo (28 s)
 - `motion/out/desafio_corazon_solucion_1.mp4` a `_4.mp4`: una versión por solución (18,6 s)
 
 ## Editar y volver a renderizar
 
-- Vista previa: abrir `motion/index.html?s=0` (video completo), `?s=5` (solo la intro) o `?s=1` a `?s=4` en el navegador.
+- Vista previa: abrir `motion/index.html?s=0` (video completo), `?s=5` (solo la intro), `?s=6` (mini resumen del holding) o `?s=1` a `?s=4` en el navegador.
+- Las unidades de negocio del mini resumen están en `BUSINESS` dentro de `motion/motion.js`.
 - Los hitos de la línea de tiempo están en `MILESTONES` y `PHASES` dentro de `motion/motion.js`.
 - Los textos y colores están al inicio de `motion/motion.js` (`SOLUTIONS` y `C`).
 - El logo está en `motion/assets/` (PNG transparentes) y embebido en `motion/assets/logos.js`.
-- Para renderizar se necesitan Node, Playwright y ffmpeg: `node motion/render.js 0 1 2 3 4 5` (0 = video completo, 5 = solo la intro)
+- Para renderizar se necesitan Node, Playwright y ffmpeg: `node motion/render.js 0 1 2 3 4 5` (0 = video completo, 5 = solo la intro, 6 = mini resumen)

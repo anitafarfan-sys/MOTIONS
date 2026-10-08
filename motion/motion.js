@@ -20,10 +20,11 @@
   const HS = 7.0; // qué es Desafío: holding de unidades de negocio
   const TL = 14.5; // duración de la intro con la línea de tiempo
   // s = 0: intro (propósito + holding + línea de tiempo) + las 4 soluciones;
-  // 1-4: una solución; 5: solo la intro.
+  // 1-4: una solución; 5: solo la intro; 6: mini video resumen del holding.
   const makeSched = (rounds, intro) => ({ rounds, intro, outro: R0 + rounds.length * RL, dur: intro + R0 + rounds.length * RL + OUTRO });
   const INTRO = MS + HS + TL;
-  const schedFor = (s) => (s === 5 ? { ...makeSched([0], INTRO), dur: INTRO } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? INTRO : 0));
+  const MINI_DUR = MS + (2.2 + 5 * 4.2) + 7.0 + 4.5; // mini video: propósito + ecosistema + foco + cierre
+  const schedFor = (s) => (s === 6 ? { mini: true, rounds: [0], intro: 0, outro: 0, dur: MINI_DUR } : s === 5 ? { ...makeSched([0], INTRO), dur: INTRO } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? INTRO : 0));
   let SCHED = schedFor(0);
   function roundAt(t) {
     if (t < R0) return null;
@@ -1815,6 +1816,292 @@
     }
   }
 
+  // ---------- Mini video resumen: propósito, ecosistema del holding y foco ----------
+  const ECO = 2.2 + 5 * 4.2;   // ecosistema: aparición + 5 unidades destacadas
+  const FOCUS = 7.0;           // foco como empresaria
+  const MCLOSE = 4.5;          // cierre
+  const BUSINESS = [
+    {
+      name: 'Desafío Ambiente', tag: 'Marca madre · proyectos de economía circular', icon: 'da',
+      text: 'La transformadora de plástico reciclado a través de la innovación y la protección del planeta.',
+      bullets: ['Empresas que quieren un proyecto de economía circular', 'Materiales por innovar que no encuentran solución', 'Fomenta el reciclaje y hace tangible su valorización'],
+    },
+    {
+      name: 'Everwood', tag: 'Producto tangible · venta directa', icon: 'everwood',
+      text: 'Productos de origen reciclado de alto rendimiento, a partir de plástico recuperado.',
+      bullets: ['Maderas plásticas', 'Infraestructura urbana resiliente y sostenible'],
+    },
+    {
+      name: 'La Tienda Sustentable', tag: 'Marketplace B2C · el más reciente', icon: 'store',
+      text: 'Productos sostenibles para decorar el hogar: cada compra es un check por el planeta.',
+      bullets: ['Sentido de pertenencia con el planeta', 'Cada producto evita residuos y recupera plástico', 'Campañas de concientización'],
+    },
+    {
+      name: 'Desafío Lab', tag: 'Innovación · I+D', icon: 'lab',
+      text: 'Crea productos innovadores que amplían los usos del plástico reciclado.',
+      bullets: ['Concentra la inversión en horas de investigación', 'Evalúa qué innovación llega al mercado'],
+    },
+    {
+      name: 'Link Circular', tag: 'Climatech · plataforma de inteligencia', icon: 'link',
+      text: 'Democratiza la sostenibilidad para que las empresas compitan con las grandes corporaciones.',
+      bullets: ['Hoja de ruta paso a paso con Linky, el asesor experto', 'Match con proveedores pertinentes', 'Mapa completo del estado de la empresa', 'Escalable a diversos rubros en LATAM'],
+    },
+  ];
+  const ECO_HUB = { x: 560, y: 600, r: 115 };
+  const ECO_R = 290, SAT_R = 78;
+  const satPos = (k) => {
+    const a = -Math.PI / 2 + (k - 1) * (Math.PI / 2);
+    return { x: ECO_HUB.x + Math.cos(a) * ECO_R, y: ECO_HUB.y + Math.sin(a) * ECO_R };
+  };
+
+  function iconStore(ctx, col) {
+    strokeIcon(ctx, col);
+    ctx.beginPath();
+    ctx.moveTo(-34, -14); ctx.lineTo(34, -14); ctx.lineTo(28, 40); ctx.lineTo(-28, 40); ctx.closePath();
+    ctx.moveTo(-16, -14); ctx.bezierCurveTo(-16, -44, 16, -44, 16, -14);
+    ctx.stroke();
+    ctx.fillStyle = C.lime;
+    ctx.beginPath();
+    ctx.ellipse(0, 14, 9, 15, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function unitIcon(ctx, key, size, col = C.cream) {
+    const k = size / 100;
+    ctx.save();
+    ctx.scale(k, k);
+    if (key === 'da') ctx.drawImage(LOGO.mark, -60, -82, 120, 164);
+    else if (key === 'everwood') {
+      const im = LOGO.hist_everwood;
+      const w = 150, h = (w * im.naturalHeight) / im.naturalWidth;
+      ctx.drawImage(im, -w / 2, -h / 2, w, h);
+    } else if (key === 'store') iconStore(ctx, col);
+    else if (key === 'lab') ICONS[2](ctx, 0, 0, 1.9, col);
+    else if (key === 'link') iconLink(ctx, C.lime);
+    ctx.restore();
+  }
+
+  function drawEcosystem(ctx, t) {
+    drawBackground(ctx, t);
+    ctx.save();
+    ctx.textAlign = 'center';
+    const ha = easeOut(prog(t, 0.1, 0.7));
+    ctx.globalAlpha = ha;
+    ctx.fillStyle = C.muted;
+    ctx.font = `700 22px ${FONT}`;
+    ctx.letterSpacing = '6px';
+    ctx.fillText('HOLDING DESAFÍO AMBIENTE', W / 2 + 3, 70);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = C.cream;
+    ctx.font = `900 52px ${FONT}`;
+    ctx.fillText('Unidades de negocio con un mismo propósito', W / 2, 135);
+    ctx.restore();
+
+    const focus = t < 2.2 ? -1 : Math.min(4, Math.floor((t - 2.2) / 4.2));
+    // conexiones
+    for (let k = 1; k < 5; k++) {
+      const p = satPos(k);
+      const lp = easeInOut(prog(t, 0.6 + k * 0.2, 1.1 + k * 0.2));
+      if (lp <= 0) continue;
+      ctx.save();
+      ctx.strokeStyle = focus === k ? C.lime : 'rgba(182,227,90,0.35)';
+      ctx.lineWidth = focus === k ? 5 : 3;
+      ctx.setLineDash(focus === k ? [] : [8, 8]);
+      ctx.lineDashOffset = -t * 30;
+      ctx.beginPath();
+      ctx.moveTo(ECO_HUB.x, ECO_HUB.y);
+      ctx.lineTo(lerp(ECO_HUB.x, p.x, lp), lerp(ECO_HUB.y, p.y, lp));
+      ctx.stroke();
+      ctx.restore();
+    }
+    // nodos
+    for (let k = 0; k < 5; k++) {
+      const isHub = k === 0;
+      const p = isHub ? ECO_HUB : satPos(k);
+      const r = isHub ? ECO_HUB.r : SAT_R;
+      const pp = easeBack(prog(t, isHub ? 0.3 : 0.9 + k * 0.2, isHub ? 0.9 : 1.4 + k * 0.2));
+      if (pp <= 0) continue;
+      const on = focus === k;
+      ctx.save();
+      ctx.globalAlpha = clamp(pp);
+      ctx.translate(p.x, p.y);
+      ctx.scale(pp * (on ? 1.08 : 1), pp * (on ? 1.08 : 1));
+      if (on) { ctx.shadowColor = 'rgba(182,227,90,0.6)'; ctx.shadowBlur = 40; }
+      ctx.fillStyle = isHub ? '#0f3b3a' : '#123d30';
+      ctx.strokeStyle = on ? C.lime : isHub ? C.brand : 'rgba(244,241,232,0.3)';
+      ctx.lineWidth = on ? 5 : 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = clamp(pp) * (focus >= 0 && !on ? 0.5 : 1);
+      ctx.stroke();
+      unitIcon(ctx, BUSINESS[k].icon, isHub ? 110 : 80, on ? C.lime : C.cream);
+      ctx.restore();
+      // etiqueta
+      ctx.save();
+      ctx.globalAlpha = clamp(pp) * (focus >= 0 && !on ? 0.6 : 1);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = on ? C.lime : C.cream;
+      ctx.font = `800 ${isHub ? 26 : 22}px ${FONT}`;
+      const ly = k === 1 ? p.y - r - 18 : p.y + r + 34;
+      if (isHub) {
+        // la etiqueta del núcleo va dentro de un pill bajo el círculo, entre los rayos
+        ctx.textAlign = 'left';
+        ctx.font = `700 18px ${FONT}`;
+        const pw = ctx.measureText('Marca madre').width + 18 * 1.4;
+        pill(ctx, p.x - pw / 2, p.y + r + 12, 'Marca madre', on ? C.lime : C.brand, on ? '#0b2b20' : '#fff', 18);
+      } else ctx.fillText(BUSINESS[k].name, p.x, ly);
+      ctx.restore();
+    }
+
+    // panel de detalle de la unidad destacada
+    if (focus >= 0) {
+      const lt = t - 2.2 - focus * 4.2;
+      const a = easeOut(prog(lt, 0, 0.45)) * (focus < 4 ? 1 - prog(lt, 3.85, 4.2) : 1 - prog(t, ECO - 0.5, ECO));
+      const b = BUSINESS[focus];
+      const x = 1030, y = 250, w = 810;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate((1 - a) * 40, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.strokeStyle = 'rgba(182,227,90,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, 640, 28);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = C.muted;
+      ctx.font = `700 18px ${FONT}`;
+      ctx.letterSpacing = '4px';
+      ctx.fillText(`UNIDAD ${focus + 1} / 5`, x + 48, y + 62);
+      ctx.letterSpacing = '0px';
+      ctx.fillStyle = C.cream;
+      ctx.font = `900 54px ${FONT}`;
+      ctx.fillText(b.name, x + 48, y + 128);
+      pill(ctx, x + 48, y + 152, b.tag, C.lime, '#0b2b20', 20);
+      ctx.fillStyle = C.cream;
+      ctx.font = `600 30px ${FONT}`;
+      const last = wrapText(ctx, b.text, x + 48, y + 250, w - 96, 40);
+      ctx.font = `500 23px ${FONT}`;
+      b.bullets.forEach((bl, i) => {
+        const ba = easeOut(prog(lt, 0.5 + i * 0.35, 0.9 + i * 0.35));
+        const by = last + 70 + i * 48;
+        ctx.globalAlpha = a * ba;
+        ctx.fillStyle = C.lime;
+        ctx.beginPath();
+        ctx.arc(x + 58, by - 8, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = C.muted;
+        ctx.fillText(bl, x + 80, by);
+      });
+      ctx.restore();
+    }
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, ECO - 0.4, ECO));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function drawFocus(ctx, t) {
+    drawBackground(ctx, t);
+    // isotipo latiendo como corazón
+    const b = pulseIn(t, 0.8, FOCUS);
+    const mp = easeBack(prog(t, 0.2, 0.8));
+    if (mp > 0) {
+      ctx.save();
+      const g = ctx.createRadialGradient(W / 2, 290, 30, W / 2, 290, 260);
+      g.addColorStop(0, `rgba(8,162,167,${0.35 + 0.25 * b})`);
+      g.addColorStop(1, 'rgba(8,162,167,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(W / 2 - 300, 0, 600, 600);
+      ctx.translate(W / 2, 290);
+      ctx.scale(mp * (1 + 0.08 * b), mp * (1 + 0.08 * b));
+      ctx.drawImage(LOGO.mark, -75, -102, 150, 205);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.textAlign = 'center';
+    const a0 = easeOut(prog(t, 0.6, 1.2));
+    ctx.globalAlpha = a0;
+    ctx.fillStyle = C.lime;
+    ctx.font = `800 24px ${FONT}`;
+    ctx.letterSpacing = '7px';
+    ctx.fillText('MI FOCO COMO EMPRESARIA', W / 2 + 3, 470);
+    ctx.letterSpacing = '0px';
+    const a1 = easeOut(prog(t, 1.1, 1.9));
+    ctx.globalAlpha = a1;
+    ctx.fillStyle = C.cream;
+    ctx.font = `900 60px ${FONT}`;
+    ctx.fillText('Crear ecosistemas de negocio con impacto ambiental,', W / 2, 580 + (1 - a1) * 20);
+    const a2 = easeOut(prog(t, 1.8, 2.6));
+    ctx.globalAlpha = a2;
+    ctx.font = `900 60px ${FONT}`;
+    const parts = [['usando un ', C.cream], ['residuo de descarte', C.lime], [' como corazón del negocio', C.cream]];
+    const total = parts.reduce((s, [p]) => s + ctx.measureText(p).width, 0);
+    let x = W / 2 - total / 2;
+    ctx.textAlign = 'left';
+    parts.forEach(([p, col]) => {
+      ctx.fillStyle = col;
+      ctx.fillText(p, x, 660 + (1 - a2) * 20);
+      x += ctx.measureText(p).width;
+    });
+    ctx.textAlign = 'center';
+    const a3 = easeOut(prog(t, 3.2, 3.9));
+    ctx.globalAlpha = a3;
+    ctx.fillStyle = C.muted;
+    ctx.font = `600 32px ${FONT}`;
+    ctx.fillText('Fomentar el reciclaje y hacer tangible su valorización,', W / 2, 790);
+    ctx.fillText('para las empresas y para las personas.', W / 2, 838);
+    ctx.restore();
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, FOCUS - 0.4, FOCUS));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function drawMiniClose(ctx, t) {
+    drawBackground(ctx, t);
+    ctx.fillStyle = 'rgba(7,26,21,0.5)';
+    ctx.fillRect(0, 0, W, H);
+    const a = easeOut(prog(t, 0.2, 0.9));
+    ctx.save();
+    ctx.globalAlpha = a;
+    const lh = 220, lw = (613 / 283) * lh;
+    ctx.translate(W / 2, 400);
+    ctx.scale(lerp(0.92, 1, a), lerp(0.92, 1, a));
+    drawLogo(ctx, -lw / 2, -lh / 2, lh, 'text_light', 0.06 * pulseIn(t, 0.9, MCLOSE));
+    ctx.restore();
+    const b = easeOut(prog(t, 0.6, 1.3));
+    ctx.save();
+    ctx.globalAlpha = b;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.cream;
+    ctx.font = `900 54px ${FONT}`;
+    ctx.fillText('ELIMINAR EL PLÁSTICO DEL PLANETA', W / 2, 630);
+    ctx.fillStyle = C.lime;
+    ctx.font = `700 34px ${FONT}`;
+    ctx.fillText('creando soluciones aplicables y comerciales', W / 2, 688);
+    ctx.fillStyle = C.muted;
+    ctx.font = `600 24px ${FONT}`;
+    ctx.globalAlpha = easeOut(prog(t, 1.1, 1.8));
+    ctx.fillText(BUSINESS.map((u) => u.name).join('  ·  '), W / 2, 770);
+    ctx.restore();
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, MCLOSE - 0.5, MCLOSE));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function drawMini(ctx, t) {
+    if (t < MS) drawMission(ctx, t);
+    else if (t < MS + ECO) drawEcosystem(ctx, t - MS);
+    else if (t < MS + ECO + FOCUS) drawFocus(ctx, t - MS - ECO);
+    else drawMiniClose(ctx, t - MS - ECO - FOCUS);
+  }
+
   function renderFrame(t) {
     const ctx = document.getElementById('stage').getContext('2d');
     ctx.save();
@@ -1843,7 +2130,13 @@
 
   window.MOTION = { FPS, W, H, duration: (s) => schedFor(s).dur, ready: logosReady };
   function renderAll(t) {
-    if (t < SCHED.intro) {
+    if (SCHED.mini) {
+      const ctx = document.getElementById('stage').getContext('2d');
+      ctx.save();
+      ctx.textAlign = 'left';
+      drawMini(ctx, t);
+      ctx.restore();
+    } else if (t < SCHED.intro) {
       const ctx = document.getElementById('stage').getContext('2d');
       ctx.save();
       ctx.textAlign = 'left';
@@ -1864,7 +2157,7 @@
     document.body.classList.add('render');
     return;
   }
-  let sel = clamp(parseInt(params.get('s') || '0', 10) || 0, 0, 5);
+  let sel = clamp(parseInt(params.get('s') || '0', 10) || 0, 0, 6);
   let start = performance.now();
   const buttons = document.querySelectorAll('#controls button');
   const mark = () => buttons.forEach((b) => b.classList.toggle('on', +b.dataset.s === sel));
