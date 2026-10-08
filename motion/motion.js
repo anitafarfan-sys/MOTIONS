@@ -17,11 +17,13 @@
   // problema (escaneo -> solución) y al final el cierre con el logo.
   const R0 = 7.4, RL = 7.8, OUTRO = 3.4;
   const MS = 6.5; // apertura con el propósito de Desafío
+  const HS = 7.0; // qué es Desafío: holding de unidades de negocio
   const TL = 14.5; // duración de la intro con la línea de tiempo
-  // s = 0: propósito + línea de tiempo + las 4 soluciones; 1-4: una solución;
-  // 5: solo propósito + línea de tiempo.
+  // s = 0: intro (propósito + holding + línea de tiempo) + las 4 soluciones;
+  // 1-4: una solución; 5: solo la intro.
   const makeSched = (rounds, intro) => ({ rounds, intro, outro: R0 + rounds.length * RL, dur: intro + R0 + rounds.length * RL + OUTRO });
-  const schedFor = (s) => (s === 5 ? { ...makeSched([0], MS + TL), dur: MS + TL } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? MS + TL : 0));
+  const INTRO = MS + HS + TL;
+  const schedFor = (s) => (s === 5 ? { ...makeSched([0], INTRO), dur: INTRO } : makeSched(s >= 1 && s <= 4 ? [s - 1] : [0, 1, 2, 3], s === 0 ? INTRO : 0));
   let SCHED = schedFor(0);
   function roundAt(t) {
     if (t < R0) return null;
@@ -1418,6 +1420,137 @@
     }
   }
 
+  // ---------- Qué es Desafío: un holding de unidades de negocio ----------
+  const UNITS = [
+    { x: W / 2 - 440, logo: 'hist_aislapet', w: 180 },
+    { x: W / 2, logo: 'hist_everwood', w: 130 },
+    { x: W / 2 + 440, logo: null },
+  ];
+
+  function drawHolding(ctx, t) {
+    drawBackground(ctx, t);
+    ctx.save();
+    ctx.textAlign = 'center';
+    const la = easeOut(prog(t, 0.2, 0.8));
+    ctx.globalAlpha = la;
+    ctx.fillStyle = C.muted;
+    ctx.font = `700 22px ${FONT}`;
+    ctx.letterSpacing = '6px';
+    ctx.fillText('QUÉ ES DESAFÍO AMBIENTE', W / 2 + 3, 110);
+    ctx.letterSpacing = '0px';
+    const ha = easeOut(prog(t, 0.4, 1.1));
+    ctx.globalAlpha = ha;
+    ctx.font = `900 64px ${FONT}`;
+    const parts = [['Un ', C.cream], ['holding', C.lime], [' que crea unidades de negocio', C.cream]];
+    const total = parts.reduce((s, [p]) => s + ctx.measureText(p).width, 0);
+    let x = W / 2 - total / 2;
+    ctx.textAlign = 'left';
+    parts.forEach(([p, col]) => {
+      ctx.fillStyle = col;
+      ctx.fillText(p, x, 200 + (1 - ha) * 20);
+      x += ctx.measureText(p).width;
+    });
+    ctx.restore();
+
+    // núcleo: el holding
+    const hub = { x: W / 2, y: 420 };
+    const hp = easeBack(prog(t, 0.8, 1.5));
+    if (hp > 0) {
+      ctx.save();
+      const g = ctx.createRadialGradient(hub.x, hub.y, 40, hub.x, hub.y, 300);
+      g.addColorStop(0, `rgba(8,162,167,${0.35 * clamp(hp)})`);
+      g.addColorStop(1, 'rgba(8,162,167,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(hub.x - 320, hub.y - 320, 640, 640);
+      ctx.globalAlpha = clamp(hp);
+      ctx.translate(hub.x, hub.y);
+      ctx.scale(hp, hp);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.strokeStyle = 'rgba(8,162,167,0.9)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-200, -85, 400, 170, 28);
+      ctx.fill();
+      ctx.stroke();
+      const h = 110, w = (613 / 283) * h;
+      drawLogo(ctx, -w / 2, -h / 2, h, 'text_light', 0.08 * pulseIn(t, 1.6, 6.0));
+      ctx.restore();
+    }
+
+    // unidades de negocio
+    const cardY = 600, cw = 300, ch = 160;
+    UNITS.forEach((u, k) => {
+      const t0 = 1.6 + k * 0.45;
+      const lp = easeInOut(prog(t, t0, t0 + 0.5));
+      if (lp > 0) {
+        const p0 = { x: hub.x, y: hub.y + 85 }, p3 = { x: u.x, y: cardY };
+        const p1 = { x: p0.x, y: p0.y + 60 }, p2 = { x: p3.x, y: p3.y - 60 };
+        ctx.save();
+        ctx.strokeStyle = C.lime;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        for (let q = 1; q <= 30; q++) {
+          const pt = bez(p0, p1, p2, p3, (q / 30) * lp);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      const cp = easeBack(prog(t, t0 + 0.4, t0 + 0.9));
+      if (cp <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = clamp(cp);
+      ctx.translate(u.x, cardY + ch / 2);
+      ctx.scale(cp, cp);
+      ctx.fillStyle = 'rgba(182,227,90,0.10)';
+      ctx.strokeStyle = C.lime;
+      ctx.lineWidth = 2.5;
+      if (!u.logo) ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 22);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (u.logo) {
+        const im = LOGO[u.logo];
+        const h = (u.w * im.naturalHeight) / im.naturalWidth;
+        ctx.drawImage(im, -u.w / 2, -h / 2, u.w, h);
+      } else {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = C.lime;
+        ctx.font = `900 56px ${FONT}`;
+        ctx.fillText('+', 0, 4);
+        ctx.fillStyle = C.cream;
+        ctx.font = `700 22px ${FONT}`;
+        ctx.fillText('Nuevas unidades', 0, 48);
+      }
+      ctx.restore();
+    });
+
+    // propósito de las unidades
+    ctx.save();
+    ctx.textAlign = 'center';
+    const s1 = easeOut(prog(t, 3.4, 4.0));
+    ctx.globalAlpha = s1;
+    ctx.fillStyle = C.cream;
+    ctx.font = `700 38px ${FONT}`;
+    ctx.fillText('que protegen el medio ambiente y promueven', W / 2, 880 + (1 - s1) * 16);
+    ctx.fillText('la sostenibilidad en las empresas', W / 2, 930 + (1 - s1) * 16);
+    const s2 = easeOut(prog(t, 4.2, 4.8));
+    ctx.globalAlpha = s2;
+    ctx.fillStyle = C.lime;
+    ctx.font = `800 38px ${FONT}`;
+    ctx.fillText('con diferentes modelos de negocio', W / 2, 1000 + (1 - s2) * 16);
+    ctx.restore();
+
+    const fade = Math.max(1 - prog(t, 0, 0.3), prog(t, HS - 0.6, HS));
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(7,26,21,${fade})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
   // ---------- Intro: línea de tiempo 2015 – 2026 ----------
   const TL_Y = 560, TL_X0 = 200, TL_DX = 217;
   const TL_T0 = 2.0, TL_STEP = 1.15;
@@ -1715,7 +1848,8 @@
       ctx.save();
       ctx.textAlign = 'left';
       if (t < MS) drawMission(ctx, t);
-      else drawTimeline(ctx, t - MS);
+      else if (t < MS + HS) drawHolding(ctx, t - MS);
+      else drawTimeline(ctx, t - MS - HS);
       ctx.restore();
     } else renderFrame(t - SCHED.intro);
   }
