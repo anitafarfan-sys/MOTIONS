@@ -27,5 +27,5 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 ## Compilado · Jornada en la playa de Barranco
 
-- `compilado/out/desafio_jornada_barranco.mp4`: video vertical 1080×1920 (Reels / TikTok / Stories), 41 s, con las mejores tomas de la jornada, rótulos con la marca, la foto grupal y cierre con el logo y el propósito. Va sin música para agregarla en la red social.
+- `compilado/out/desafio_jornada_barranco.mp4`: video vertical 1080×1920 (Reels / TikTok / Stories), 41 s, con las mejores tomas de la jornada, rótulos con la marca, la foto grupal y cierre con el logo y el propósito. Incluye una música original (generada por `compilado/music.py`, sin derechos de terceros).
 - Para regenerarlo: `python3 -I compilado/build.py <carpeta_con_los_clips> <foto_grupal.jpg>`. Los tramos elegidos y los textos están en `SHOTS` dentro de `compilado/build.py`.

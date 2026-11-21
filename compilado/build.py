@@ -187,10 +187,19 @@ def main():
     lst = os.path.join(tmp, 'list.txt')
     with open(lst, 'w') as fh:
         fh.writelines(f"file '{p}'\n" for p in parts)
-    final = os.path.join(out_dir, 'desafio_jornada_barranco.mp4')
+    joined = os.path.join(tmp, 'joined.mp4')
     run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst,
          '-c:v', 'libx264', '-crf', '19', '-preset', 'medium', '-pix_fmt', 'yuv420p',
-         '-c:a', 'aac', '-movflags', '+faststart', final])
+         '-an', joined])
+    # música original (compilado/music.py), ajustada a -14 LUFS para redes sociales
+    dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', joined],
+                               capture_output=True, text=True, check=True).stdout)
+    wav = os.path.join(tmp, 'music.wav')
+    run([sys.executable, '-I', os.path.join(HERE, 'music.py'), str(dur), wav])
+    final = os.path.join(out_dir, 'desafio_jornada_barranco.mp4')
+    run(['ffmpeg', '-y', '-loglevel', 'error', '-i', joined, '-i', wav,
+         '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-af', 'loudnorm=I=-14:TP=-1.5:LRA=7',
+         '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', final])
     print(final)
 
 
