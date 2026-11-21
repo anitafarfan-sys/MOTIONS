@@ -39,3 +39,8 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 - `compilado/out/desafio_short_barranco.mp4`: short vertical de 23 s con cortes al ritmo de una pista original de 120 BPM (gancho de 4 s con texto grande, drop con tomas de 0,5 a 1,5 s, cierre con logo y propósito). Zoom de impacto en cada corte, paneo sobre las fotos, destellos, gradación turquesa/naranja, viñeta y grano.
 - Para regenerarlo: `python3 -I compilado/short.py <carpeta_con_clips_y_fotos>`. El guion de tomas está en `HOOK` y `DROP` dentro de `compilado/short.py`.
+
+## Short 15 s · "Antes era un residuo, hoy es una pasarela"
+
+- `compilado/out/desafio_short15_pasarela.mp4`: 15 s verticales. 0–2 s en blanco y negro ("ANTES ERA / UN RESIDUO"), destello y color en el drop ("HOY ES / UNA PASARELA"), testimonio con audio real de Desafío Ambiente en la pasarela (4–11,5 s, música baja) con stickers que saltan (PASARELA INCLUSIVA · LIMA · PERÚ), cierre rápido y logo.
+- Para regenerarlo: `python3 -I compilado/short15.py <carpeta_con_clips_y_fotos>`. Las tomas están en `SHOTS` dentro de `compilado/short15.py`.

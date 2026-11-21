@@ -98,12 +98,13 @@ RNG = np.random.default_rng(3)
 GRAIN = [RNG.normal(0, 7, (H // 2, W // 2, 1)).astype(np.float32) for _ in range(6)]
 
 
-def grade(img, f, flash=0.0, dim=0.0):
+def grade(img, f, flash=0.0, dim=0.0, sat=1.18):
     a = np.asarray(img, np.float32)
     lum = (a @ np.array([0.299, 0.587, 0.114], np.float32))[..., None] / 255
     a = (a - 128) * 1.12 + 128  # contraste
-    a = lum * 255 + (a - lum * 255) * 1.18  # saturación
-    a += (1 - lum) * np.array([-6, 4, 12], np.float32) + lum * np.array([14, 4, -10], np.float32)
+    a = lum * 255 + (a - lum * 255) * sat  # saturación (0 = blanco y negro)
+    if sat > 0:
+        a += (1 - lum) * np.array([-6, 4, 12], np.float32) + lum * np.array([14, 4, -10], np.float32)
     a *= VIG * (1 - dim)
     g = GRAIN[f % len(GRAIN)]
     a += np.repeat(np.repeat(g, 2, 0), 2, 1)
