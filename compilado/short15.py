@@ -36,14 +36,14 @@ SHOTS = [
     (2.5, 0.5, 'v', 'f52cbe23', 6.4, 1.0, 0.5, False),
     (3.0, 0.5, 'v', '5f9e9d19', 6.2, 1.38, 0.0, False),
     (3.5, 0.5, 'v', 'f52cbe23', 0.5, 1.0, 0.5, False),
-    (4.0, 3.0, 'v', '364b9225', 0.0, 1.0, 0.5, False),   # testimonio (audio real)
+    (4.0, 3.0, 'v', 'bb471558', 6.3, 1.0, 0.5, False),   # testimonio del señor de blanco (audio real)
     (7.0, 1.0, 'v', 'f52cbe23', 2.0, 1.0, 0.5, False),   # inserto, la voz sigue
-    (8.0, 3.5, 'v', '364b9225', 4.0, 1.0, 0.5, False),
+    (8.0, 3.5, 'v', 'bb471558', 10.3, 1.0, 0.5, False),
     (11.5, 0.5, 'v', '5f9e9d19', 11.6, 1.38, 0.0, False),
     (12.0, 0.5, 'p', '95a9ab11', None, 1.0, 0.5, False),
     (12.5, 0.5, 'p', '6620db7b', None, 1.0, 0.5, False),
 ]
-TESTI_CLIP, TESTI_SS = '364b9225', 0.0
+TESTI_CLIP, TESTI_SS = 'bb471558', 6.3  # tramo 6,3–13,8 s: empieza y termina en pausas
 
 
 def view(src, lt, dur, zbase=1.0, fy=0.5):
@@ -98,7 +98,7 @@ def main():
     s_incl = sticker('PASARELA INCLUSIVA', LIME, (11, 43, 32), 64, 3)
     s_lima = sticker('LIMA', TEAL, (255, 255, 255), 78, -8)
     s_peru = sticker('PERÚ', RED, (255, 255, 255), 78, 7)
-    s_da = sticker('DESAFÍO AMBIENTE', (7, 26, 21), CREAM, 34, 0)
+    s_da = sticker('VOCES DE LA JORNADA', (7, 26, 21), CREAM, 34, 0)
     s_end = sticker('LIMA · PERÚ', LIME, (11, 43, 32), 52, -3)
 
     n_total = int(TOTAL * FPS)
@@ -132,8 +132,8 @@ def main():
             # stickers durante el testimonio
             pop(img, s_da, W / 2, H * 0.93, t - 4.1, 7.3)
             pop(img, s_incl, W / 2, H * 0.78, t - 4.4, 3.4)
-            pop(img, s_lima, W * 0.30, H * 0.13, t - 8.1, 3.3)
-            pop(img, s_peru, W * 0.70, H * 0.16, t - 8.6, 2.8)
+            pop(img, s_lima, W * 0.28, H * 0.70, t - 8.1, 3.3)
+            pop(img, s_peru, W * 0.72, H * 0.75, t - 8.6, 2.8)
             pop(img, s_end, W / 2, H * 0.80, t - 12.05, 0.95)
             enc.stdin.write(img.convert('RGB').tobytes())
             f += 1
@@ -164,8 +164,8 @@ def main():
     music = os.path.join(tmp, 'm.wav')
     soundtrack(TOTAL, DROP_T, LOGO_T, music)
     testi = find(clips, TESTI_CLIP)
-    # el testimonio suena continuo de 0 a 7,5 s del clip (corta en una pausa); el inserto
-    # de 7 a 8 s del short tapa la imagen pero no la voz, y la toma de 8 s retoma en 4 s del clip
+    # el testimonio suena continuo 7,5 s desde TESTI_SS (corta en pausas); el inserto de
+    # 7 a 8 s del short tapa la imagen pero no la voz, y la toma de 8 s retoma 4 s después
     seg = TESTI_END - TESTI_T
     duck = f"1-0.8*clip((t-{TESTI_T - 0.15})/0.15,0,1)*clip(({TESTI_END + 0.1}-t)/0.15,0,1)"
     fc = (f'[0:a]volume=\'{duck}\':eval=frame[m];'

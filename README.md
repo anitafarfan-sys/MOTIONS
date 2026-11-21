@@ -42,5 +42,5 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 ## Short 15 s · "Antes era un residuo, hoy es una pasarela"
 
-- `compilado/out/desafio_short15_pasarela.mp4`: 15 s verticales. 0–2 s en blanco y negro ("ANTES ERA / UN RESIDUO"), destello y color en el drop ("HOY ES / UNA PASARELA"), testimonio con audio real de Desafío Ambiente en la pasarela (4–11,5 s, música baja) con stickers que saltan (PASARELA INCLUSIVA · LIMA · PERÚ), cierre rápido y logo.
+- `compilado/out/desafio_short15_pasarela.mp4`: 15 s verticales. 0–2 s en blanco y negro ("ANTES ERA / UN RESIDUO"), destello y color en el drop ("HOY ES / UNA PASARELA"), testimonio con audio real del señor de blanco sentado en la pasarela (4–11,5 s, música baja) con stickers que saltan (PASARELA INCLUSIVA · LIMA · PERÚ), cierre rápido y logo.
 - Para regenerarlo: `python3 -I compilado/short15.py <carpeta_con_clips_y_fotos>`. Las tomas están en `SHOTS` dentro de `compilado/short15.py`.
