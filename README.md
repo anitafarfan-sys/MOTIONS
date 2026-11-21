@@ -24,3 +24,8 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 - Los textos y colores están al inicio de `motion/motion.js` (`SOLUTIONS` y `C`).
 - El logo está en `motion/assets/` (PNG transparentes) y embebido en `motion/assets/logos.js`.
 - Para renderizar se necesitan Node, Playwright y ffmpeg: `node motion/render.js 0 1 2 3 4 5` (0 = video completo, 5 = solo la intro, 6 = mini resumen)
+
+## Compilado · Jornada en la playa de Barranco
+
+- `compilado/out/desafio_jornada_barranco.mp4`: video vertical 1080×1920 (Reels / TikTok / Stories), 41 s, con las mejores tomas de la jornada, rótulos con la marca, la foto grupal y cierre con el logo y el propósito. Va sin música para agregarla en la red social.
+- Para regenerarlo: `python3 -I compilado/build.py <carpeta_con_los_clips> <foto_grupal.jpg>`. Los tramos elegidos y los textos están en `SHOTS` dentro de `compilado/build.py`.
