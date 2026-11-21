@@ -34,3 +34,8 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 - `compilado/out/desafio_testimonios_barranco.mp4`: video vertical 1080×1920, 2 min 14 s, con los 5 testimonios completos y su **audio real** (Desafío Ambiente, voces de la jornada, Magnesol, reciclador autorizado y Desafío Ambiente en la pasarela). Cada tramo se corta en una pausa natural, con limpieza suave del ruido de playa y volumen parejo (-16 LUFS). Apertura y cierre con el logo y la música original.
 - Para regenerarlo: `python3 -I compilado/testimonios.py <carpeta_con_los_clips>`. Los tramos y rótulos están en `TESTIMONIOS` dentro de `compilado/testimonios.py`.
+
+## Short cinematográfico · Barranco
+
+- `compilado/out/desafio_short_barranco.mp4`: short vertical de 23 s con cortes al ritmo de una pista original de 120 BPM (gancho de 4 s con texto grande, drop con tomas de 0,5 a 1,5 s, cierre con logo y propósito). Zoom de impacto en cada corte, paneo sobre las fotos, destellos, gradación turquesa/naranja, viñeta y grano.
+- Para regenerarlo: `python3 -I compilado/short.py <carpeta_con_clips_y_fotos>`. El guion de tomas está en `HOOK` y `DROP` dentro de `compilado/short.py`.
