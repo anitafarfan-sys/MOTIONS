@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import music as M  # noqa: E402
-from build import BG, CREAM, FPS, H, HERE, LIME, W, font, logo  # noqa: E402
+from build import BG, CREAM, FPS, H, HERE, LIME, SAFE_BOTTOM, SAFE_TEXT_W, W, font, logo  # noqa: E402
 
 BPM = 120
 BEAT = 60 / BPM
@@ -113,9 +113,12 @@ def grade(img, f, flash=0.0, dim=0.0, sat=1.18):
     return Image.fromarray(a.clip(0, 255).astype(np.uint8))
 
 
-def text_img(lines, size, colors):
-    fnts = [font('Black', size)] * len(lines)
+def text_img(lines, size, colors, max_w=SAFE_TEXT_W):
+    """Texto en bloque centrado; se achica si no cabe en el ancho seguro de Reels/Historias."""
     d = ImageDraw.Draw(Image.new('RGBA', (10, 10)))
+    while size > 20 and max(d.textlength(t, font=font('Black', size)) for t in lines) > max_w:
+        size -= 2
+    fnts = [font('Black', size)] * len(lines)
     w = int(max(d.textlength(t, font=f) for t, f in zip(lines, fnts))) + 40
     h = int(size * 1.08 * len(lines)) + 40
     img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
@@ -272,7 +275,7 @@ def main():
             fl = (0.6 if flash else 0.18) * max(0, 1 - lt / (0.12 if flash else 0.05))
             img = grade(view(src, lt, n / FPS, arg if kind == 'p' else (0.5, 0.5)), f_global, flash=fl).convert('RGBA')
             if ti is not None and lt >= 0.08:
-                slam(img, ti, W / 2, H * 0.80, lt - 0.08)
+                slam(img, ti, W / 2, SAFE_BOTTOM - 60, lt - 0.08)
             emit(img)
 
     # cierre: logo con golpe y propósito

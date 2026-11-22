@@ -44,3 +44,12 @@ El plástico problemático entra **una sola vez** a la caja **Desafío** (con el
 
 - `compilado/out/desafio_short15_pasarela.mp4`: 15 s verticales. 0–2 s en blanco y negro ("ANTES ERA / UN RESIDUO"), destello y color en el drop ("HOY ES / UNA PASARELA"), testimonio con audio real del señor de blanco sentado en la pasarela (4–11,5 s, música baja) con stickers que saltan (PASARELA INCLUSIVA · LIMA · PERÚ), cierre rápido y logo.
 - Para regenerarlo: `python3 -I compilado/short15.py <carpeta_con_clips_y_fotos>`. Las tomas están en `SHOTS` dentro de `compilado/short15.py`.
+
+## Zona segura Instagram (Reels + Historias)
+
+Los 4 videos verticales de `compilado/` respetan una zona segura común a Reels e Historias (1080×1920), definida en `compilado/build.py`:
+
+- arriba 250 px libres (nombre de la cuenta y barra de progreso de las historias),
+- abajo 440 px libres (descripción, caja de respuesta, música): el contenido termina en y = 1480,
+- derecha 140 px libres (botones de me gusta, comentar y compartir) e izquierda 70 px,
+- todo texto centrado se achica solo para no pasar de 780 px de ancho.

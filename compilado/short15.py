@@ -17,7 +17,7 @@ import tempfile
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build import BG, CREAM, FPS, H, HERE, LIME, TEAL, W, font, logo  # noqa: E402
+from build import BG, CREAM, FPS, H, HERE, LIME, SAFE_BOTTOM, TEAL, W, font, logo  # noqa: E402
 from short import (BEAT, ease, find, grade, photo_base, slam, soundtrack,  # noqa: E402
                    text_img, video_frames)
 
@@ -130,11 +130,12 @@ def main():
                 slam(img, t_hoy, W / 2, H * 0.40, 1.0)
                 slam(img, t_pasarela, W / 2, H * 0.50, t - 3.0)
             # stickers durante el testimonio
-            pop(img, s_da, W / 2, H * 0.93, t - 4.1, 7.3)
-            pop(img, s_incl, W / 2, H * 0.78, t - 4.4, 3.4)
-            pop(img, s_lima, W * 0.28, H * 0.70, t - 8.1, 3.3)
-            pop(img, s_peru, W * 0.72, H * 0.75, t - 8.6, 2.8)
-            pop(img, s_end, W / 2, H * 0.80, t - 12.05, 0.95)
+            # todo dentro de la zona segura de Reels/Historias (abajo hasta SAFE_BOTTOM)
+            pop(img, s_da, W / 2, SAFE_BOTTOM - 40, t - 4.1, 7.3)
+            pop(img, s_incl, W / 2, SAFE_BOTTOM - 150, t - 4.4, 3.4)
+            pop(img, s_lima, W * 0.30, SAFE_BOTTOM - 260, t - 8.1, 3.3)
+            pop(img, s_peru, W * 0.66, SAFE_BOTTOM - 170, t - 8.6, 2.8)
+            pop(img, s_end, W / 2, SAFE_BOTTOM - 110, t - 12.05, 0.95)
             enc.stdin.write(img.convert('RGB').tobytes())
             f += 1
 

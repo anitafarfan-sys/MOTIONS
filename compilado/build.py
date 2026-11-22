@@ -22,6 +22,13 @@ CREAM = (244, 241, 232)
 LIME = (182, 227, 90)
 TEAL = (8, 162, 167)
 
+# Zona segura común a Reels e Historias de Instagram (1080x1920): arriba queda el
+# nombre de la cuenta y la barra de progreso; abajo, la descripción, la caja de
+# respuesta y la música; a la derecha, los botones de me gusta / comentar / compartir.
+SAFE_TOP, SAFE_BOTTOM = 250, H - 440      # 250 .. 1480
+SAFE_LEFT, SAFE_RIGHT = 70, W - 140       # 70 .. 940
+SAFE_TEXT_W = 780                         # ancho máx. de un texto centrado (150 .. 930)
+
 # (archivo, inicio, duración, etiqueta, texto)
 SHOTS = [
     ('a2a8096a', 0.0, 4.5, 'PLAYA DE BARRANCO', 'Una pasarela hecha con plástico reciclado'),
@@ -37,6 +44,14 @@ SHOTS = [
 
 def font(weight, size):
     return ImageFont.truetype(os.path.join(FONT_DIR, f'Inter-{weight}.otf'), size)
+
+
+def fit_font(text, weight, size, max_w=SAFE_TEXT_W):
+    """Fuente al tamaño pedido, achicada si el texto no cabe en max_w."""
+    d = ImageDraw.Draw(Image.new('RGBA', (10, 10)))
+    while size > 20 and d.textlength(text, font=font(weight, size)) > max_w:
+        size -= 2
+    return font(weight, size)
 
 
 def wrap(draw, text, fnt, max_w):
@@ -60,15 +75,17 @@ def caption_png(label, text, path):
     grad = Image.new('L', (1, 700))
     for y in range(700):
         grad.putpixel((0, y), int(200 * (y / 699) ** 1.6))
-    img.paste(Image.new('RGBA', (W, 700), BG + (255,)), (0, H - 700), grad.resize((W, 700)))
+    img.paste(Image.new('RGBA', (W, 700), BG + (255,)), (0, H - 760), grad.resize((W, 700)))
+    img.paste(Image.new('RGBA', (W, 60), BG + (200,)), (0, H - 60))
     fl, ft = font('Bold', 34), font('ExtraBold', 62)
-    lines = wrap(d, text, ft, W - 160)
-    y = H - 230 - (len(lines) - 1) * 74
+    x = SAFE_LEFT + 10
+    lines = wrap(d, text, ft, SAFE_RIGHT - x)
+    y = SAFE_BOTTOM - 74 * len(lines)  # la última línea termina en el borde seguro
     lw = d.textlength(label, font=fl) + 48
-    d.rounded_rectangle((80, y - 86, 80 + lw, y - 30), radius=28, fill=LIME)
-    d.text((104, y - 79), label, font=fl, fill=(11, 43, 32))
+    d.rounded_rectangle((x, y - 86, x + lw, y - 30), radius=28, fill=LIME)
+    d.text((x + 24, y - 79), label, font=fl, fill=(11, 43, 32))
     for i, ln in enumerate(lines):
-        d.text((80, y + i * 74), ln, font=ft, fill=CREAM)
+        d.text((x, y + i * 74), ln, font=ft, fill=CREAM)
     img.save(path)
 
 
@@ -99,11 +116,12 @@ def card_frames(kind, n, photo=None):
             fg = fg.crop(((fg.width - W) // 2, (fg.height - box_h) // 2, (fg.width - W) // 2 + W, (fg.height - box_h) // 2 + box_h))
             img.paste(fg, (0, 420))
             d = ImageDraw.Draw(img)
-            ft = font('ExtraBold', 64)
+            ft = fit_font('hicieron posible esta jornada', 'ExtraBold', 64)
             for i, ln in enumerate(['Gracias a todos los que', 'hicieron posible esta jornada']):
                 tw = d.textlength(ln, font=ft)
-                d.text(((W - tw) / 2, 1430 + i * 80), ln, font=ft, fill=CREAM)
-            img.alpha_composite(lg.resize((lg.width * 2 // 3, lg.height * 2 // 3)), ((W - lg.width * 2 // 3) // 2, 1680))
+                d.text(((W - tw) / 2, 1285 + i * 80), ln, font=ft, fill=CREAM)
+            small = lg.resize((lg.width * 2 // 3, lg.height * 2 // 3))
+            img.alpha_composite(small, ((W - small.width) // 2, SAFE_TOP + 20))
         else:
             img = Image.new('RGBA', (W, H), BG + (255,))
             g = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -117,10 +135,12 @@ def card_frames(kind, n, photo=None):
             col = tuple(int(BG[i] + (c - BG[i]) * min(1, max(0, p * 3 - 0.6))) for i, c in enumerate(CREAM))
             lim = tuple(int(BG[i] + (c - BG[i]) * min(1, max(0, p * 3 - 0.9))) for i, c in enumerate(LIME))
             if kind == 'intro':
-                rows = [('Jornada en la playa', font('Black', 84), col), ('Barranco · Perú', font('Bold', 52), lim)]
+                rows = [('Jornada en la playa', fit_font('Jornada en la playa', 'Black', 84), col),
+                        ('Barranco · Perú', fit_font('Barranco · Perú', 'Bold', 52), lim)]
                 y0 = 900
             else:
-                rows = [('ELIMINAR EL PLÁSTICO', font('Black', 78), col), ('DEL PLANETA', font('Black', 78), col),
+                big_f = fit_font('ELIMINAR EL PLÁSTICO', 'Black', 78)
+                rows = [('ELIMINAR EL PLÁSTICO', big_f, col), ('DEL PLANETA', big_f, col),
                         ('creando soluciones', font('Bold', 50), lim), ('aplicables y comerciales', font('Bold', 50), lim)]
                 y0 = 860
             y = y0

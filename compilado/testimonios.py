@@ -13,8 +13,8 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build import (BG, CREAM, FPS, H, HERE, LIME, TEAL, W, font, logo, run,  # noqa: E402
-                   wrap)
+from build import (BG, CREAM, FPS, H, HERE, LIME, SAFE_BOTTOM, SAFE_LEFT,  # noqa: E402
+                   SAFE_RIGHT, SAFE_TOP, TEAL, W, fit_font, font, logo, run, wrap)
 from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
 # (archivo, inicio, fin, etiqueta, rótulo) — inicio/fin caen en pausas del audio
@@ -33,16 +33,18 @@ def lower_third(label, text, path):
     grad = Image.new('L', (1, 520))
     for y in range(520):
         grad.putpixel((0, y), int(185 * (y / 519) ** 1.7))
-    img.paste(Image.new('RGBA', (W, 520), BG + (255,)), (0, H - 520), grad.resize((W, 520)))
+    img.paste(Image.new('RGBA', (W, 520), BG + (255,)), (0, H - 640), grad.resize((W, 520)))
+    img.paste(Image.new('RGBA', (W, 120), BG + (185,)), (0, H - 120))
     d = ImageDraw.Draw(img)
     fl, ft = font('Bold', 32), font('ExtraBold', 54)
-    lines = wrap(d, text, ft, W - 160)
-    y = H - 190 - (len(lines) - 1) * 64
+    x = SAFE_LEFT + 10
+    lines = wrap(d, text, ft, SAFE_RIGHT - x)
+    y = SAFE_BOTTOM - 64 * len(lines)  # la última línea termina en el borde seguro
     lw = d.textlength(label, font=fl) + 44
-    d.rounded_rectangle((80, y - 80, 80 + lw, y - 28), radius=26, fill=LIME)
-    d.text((102, y - 74), label, font=fl, fill=(11, 43, 32))
+    d.rounded_rectangle((x, y - 80, x + lw, y - 28), radius=26, fill=LIME)
+    d.text((x + 22, y - 74), label, font=fl, fill=(11, 43, 32))
     for i, ln in enumerate(lines):
-        d.text((80, y + i * 64), ln, font=ft, fill=CREAM)
+        d.text((x, y + i * 64), ln, font=ft, fill=CREAM)
     img.save(path)
 
 
@@ -51,8 +53,8 @@ def watermark(path):
     lg = logo(64)
     sh = Image.new('RGBA', (lg.width + 40, lg.height + 30), (0, 0, 0, 0))
     ImageDraw.Draw(sh).rounded_rectangle((0, 0, sh.width - 1, sh.height - 1), radius=22, fill=(7, 26, 21, 150))
-    img.alpha_composite(sh, (52, 70))
-    img.alpha_composite(lg, (72, 85))
+    img.alpha_composite(sh, (SAFE_LEFT, SAFE_TOP))
+    img.alpha_composite(lg, (SAFE_LEFT + 20, SAFE_TOP + 15))
     img.save(path)
 
 
@@ -74,11 +76,12 @@ def card(kind, n):
             k = min(1, max(0, p * 3 - delay))
             return tuple(int(BG[i] + (v - BG[i]) * k) for i, v in enumerate(c))
         if kind == 'intro':
-            rows = [('Testimonios', font('Black', 96), mix(CREAM, 0.6)),
-                    ('Jornada en la playa · Barranco, Perú', font('Bold', 44), mix(LIME, 0.9))]
+            rows = [('Testimonios', fit_font('Testimonios', 'Black', 96), mix(CREAM, 0.6)),
+                    ('Jornada en la playa · Barranco, Perú', fit_font('Jornada en la playa · Barranco, Perú', 'Bold', 44), mix(LIME, 0.9))]
         else:
-            rows = [('ELIMINAR EL PLÁSTICO', font('Black', 78), mix(CREAM, 0.6)),
-                    ('DEL PLANETA', font('Black', 78), mix(CREAM, 0.6)),
+            big_f = fit_font('ELIMINAR EL PLÁSTICO', 'Black', 78)
+            rows = [('ELIMINAR EL PLÁSTICO', big_f, mix(CREAM, 0.6)),
+                    ('DEL PLANETA', big_f, mix(CREAM, 0.6)),
                     ('creando soluciones', font('Bold', 50), mix(LIME, 0.9)),
                     ('aplicables y comerciales', font('Bold', 50), mix(LIME, 0.9))]
         y = 900
