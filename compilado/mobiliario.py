@@ -25,7 +25,7 @@ from short import (find, grade, photo_base, slam, soundtrack, tag_img, text_img,
                    video_frames, view)
 
 FOTOS = os.path.join(HERE, 'fotos_lima')
-TOTAL, DROP_T, OUTRO_T = 31.0, 3.0, 26.5
+TOTAL, DROP_T, OUTRO_T, CTA_T = 35.0, 3.0, 26.5, 30.5
 INK = (11, 43, 32)
 
 # Escenas de producto: (inicio, foto, foco x (inicio, fin), mueble, origen, escala, título, lugar)
@@ -165,7 +165,7 @@ def main():
             dim = 0.45
             flash = 0.35 * max(0, 1 - (t - s0) / 0.06)
         else:
-            img = view(ph('095.jpg'), t - OUTRO_T, TOTAL - OUTRO_T, (0.55, 0.65)).convert('RGBA')
+            img = view(ph('095.jpg'), t - OUTRO_T, CTA_T - OUTRO_T, (0.55, 0.65)).convert('RGBA')
             dim = 0.62
             flash = 0.7 * max(0, 1 - (t - OUTRO_T) / 0.15)
 
@@ -203,6 +203,27 @@ def main():
             for i in range(5):
                 dd.ellipse((i * 60 + 10, 8, i * 60 + 34, 32), fill=(LIME if i <= idx else (244, 241, 232)) + ((255,) if i <= idx else (90,)))
             g.alpha_composite(dots, (W // 2 - 150, SAFE_BOTTOM - 60))
+        elif t >= CTA_T:  # llamado a la acción final
+            lt = t - CTA_T
+            g = grade(Image.new('RGB', (W, H), BG), f, flash=0.6 * max(0, 1 - lt / 0.12)).convert('RGBA')
+            glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+            ImageDraw.Draw(glow).ellipse((W / 2 - 480, H * 0.30, W / 2 + 480, H * 0.72), fill=TEAL + (60,))
+            from PIL import ImageFilter
+            g.alpha_composite(glow.filter(ImageFilter.GaussianBlur(150)))
+            slam(g, logo(130), W / 2, SAFE_TOP + 130, lt)
+            slam(g, text_img(['CONVERSEMOS'], 130, [CREAM]), W / 2, H * 0.40, lt - 0.2)
+            if lt > 0.7:
+                slam(g, text_img(['cotiza con nosotros', 'tu mobiliario'], 66, [CREAM]), W / 2, H * 0.52, lt - 0.7)
+            if lt > 1.1:
+                slam(g, text_img(['CIRCULAR'], 120, [LIME]), W / 2, H * 0.62, lt - 1.1)
+            if lt > 1.6:
+                b = pill('Escríbenos · desafioambiente.cl', LIME, INK, 40)
+                pulse = 1 + 0.04 * math.sin((lt - 1.6) * 6)
+                b = b.resize((int(b.width * pulse), int(b.height * pulse)))
+                slam(g, b, W / 2, SAFE_BOTTOM - 70, lt - 1.6)
+            fade = max(0.0, (lt - (TOTAL - CTA_T - 0.4)) / 0.4)
+            if fade > 0:
+                g = Image.blend(g, Image.new('RGBA', (W, H), BG + (255,)), min(1.0, fade))
         else:
             lt = t - OUTRO_T
             slam(g, logo(150), W / 2, SAFE_TOP + 200, lt)
@@ -215,7 +236,7 @@ def main():
                 cr = text_img(['Fotos de la costa: Wikimedia Commons (CC BY / CC BY-SA)',
                                'créditos completos en la descripción'], 24, [(200, 200, 190)], max_w=760)
                 slam(g, cr, W / 2, SAFE_BOTTOM - 50, lt - 2.0)
-            fade = max(0.0, (lt - (TOTAL - OUTRO_T - 0.5)) / 0.5)
+            fade = max(0.0, (lt - (CTA_T - OUTRO_T - 0.3)) / 0.3)
             if fade > 0:
                 g = Image.blend(g, Image.new('RGBA', (W, H), BG + (255,)), min(1.0, fade))
         if stills:
