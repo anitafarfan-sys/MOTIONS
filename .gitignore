@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+compilado/out/still_*.jpg
+compilado/out/*_v1.mp4
