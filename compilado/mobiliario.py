@@ -7,7 +7,7 @@ de Barranco y las propiedades clave para la costa. Cortes al pulso de una pista
 original de 120 BPM, color cinematográfico y zona segura de Reels/Historias.
 
 Uso: python3 -I compilado/mobiliario.py <carpeta_clips_barranco> [t1,t2,...  (solo cuadros de prueba)]
-Salida: compilado/out/desafio_mobiliario_circular_lima.mp4
+Salida: compilado/out/desafio_mobiliario_circular_lima_v1.mp4 (primera versión, con muebles ilustrados)
 """
 import math
 import os
@@ -250,7 +250,7 @@ def main():
 
     music = os.path.join(tmp, 'm.wav')
     soundtrack(TOTAL, DROP_T, OUTRO_T, music)
-    final = os.path.join(out_dir, 'desafio_mobiliario_circular_lima.mp4')
+    final = os.path.join(out_dir, 'desafio_mobiliario_circular_lima_v1.mp4')
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', os.path.join(tmp, 'v.mp4'), '-i', music,
                     '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-af', 'loudnorm=I=-14:TP=-1.5:LRA=7',
                     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', final],

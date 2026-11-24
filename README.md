@@ -56,6 +56,7 @@ Los 4 videos verticales de `compilado/` respetan una zona segura común a Reels 
 
 ## MOBILIARIO CIRCULAR · borde costero de Lima
 
-- `compilado/out/desafio_mobiliario_circular_lima.mp4`: 35 s verticales. Head "MOBILIARIO CIRCULAR" sobre la Costa Verde; propuestas de reposeras (Agua Dulce), mesas de picnic (Playa Redondo), jardineras y bancas (Malecón de Miraflores) que se arman tabla por tabla; proyecto real de la pasarela de Barranco; propiedades (no se pudre, no se astilla, no requiere mantención, reciclable, resistente al sol), logo y llamado final "Conversemos, cotiza con nosotros tu mobiliario CIRCULAR".
+- `compilado/out/desafio_mobiliario_circular_lima.mp4`: 44 s verticales con productos reales. Head "MOBILIARIO CIRCULAR · Lima, Perú"; cada tipo de producto (sillas Adirondack, mesas de picnic, bancas, sets lounge, mesas altas y pisos) aparece a pantalla completa y luego cae como tarjeta sobre una playa o malecón de Lima; jardineras y reposeras a medida (ilustradas); colores a elección; proyecto real de Barranco; propiedades (no se pudre, no se astilla, no requiere mantención, reciclable, resistente al sol); catálogo "Implementamos en toda la costa" y cierre "Conversemos, cotiza con nosotros tu mobiliario CIRCULAR".
+- Para regenerarlo: `python3 -I compilado/mobiliario_lima.py <carpeta_con_clips_y_videos_de_producto>` (videos de producto Adirondack, Mesas de Picnic y All-Product Showcase, no incluidos en el repo por tamaño).
+- Primera versión con muebles ilustrados: `compilado/mobiliario.py` → `desafio_mobiliario_circular_lima_v1.mp4` (no versionado).
 - Fotos de la costa: Wikimedia Commons, licencias CC BY / CC BY-SA / dominio público. Créditos en `compilado/fotos_lima/CREDITOS.md` (incluirlos en la descripción al publicar).
-- Para regenerarlo: `python3 -I compilado/mobiliario.py <carpeta_clips_barranco>`.
