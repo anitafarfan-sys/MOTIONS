@@ -53,3 +53,9 @@ Los 4 videos verticales de `compilado/` respetan una zona segura común a Reels 
 - abajo 440 px libres (descripción, caja de respuesta, música): el contenido termina en y = 1480,
 - derecha 140 px libres (botones de me gusta, comentar y compartir) e izquierda 70 px,
 - todo texto centrado se achica solo para no pasar de 780 px de ancho.
+
+## MOBILIARIO CIRCULAR · borde costero de Lima
+
+- `compilado/out/desafio_mobiliario_circular_lima.mp4`: 31 s verticales. Head "MOBILIARIO CIRCULAR" sobre la Costa Verde; propuestas de reposeras (Agua Dulce), mesas de picnic (Playa Redondo), jardineras y bancas (Malecón de Miraflores) que se arman tabla por tabla; proyecto real de la pasarela de Barranco; propiedades (no se pudre, no se astilla, no requiere mantención, reciclable, resistente al sol) y cierre con logo.
+- Fotos de la costa: Wikimedia Commons, licencias CC BY / CC BY-SA / dominio público. Créditos en `compilado/fotos_lima/CREDITOS.md` (incluirlos en la descripción al publicar).
+- Para regenerarlo: `python3 -I compilado/mobiliario.py <carpeta_clips_barranco>`.
